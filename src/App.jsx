@@ -22,7 +22,10 @@ import ratingM from './assets/Mature.png';
 import ratingT from './assets/T.webp';
 import ratingE from './assets/E.png';
 import ratingE10 from './assets/E10+.jpg';
-import ratingAO from './assets/AO.webp';  
+import ratingAO from './assets/AO.webp';
+import earlyChildhood from './assets/ec.png';
+import KA from './assets/Kids_Adults.svg';
+import ratingPending from './assets/RP.svg';   
 import Pegi3 from './assets/3.jpg';
 import Pegi7 from './assets/7.png';
 import Pegi12 from './assets/12.png';
@@ -43,6 +46,9 @@ const RATING_IMAGES = [
     { name: 'Teen', src: ratingT },
     { name: 'Mature', src: ratingM },
     { name: 'Adults Only', src: ratingAO },
+    { name: 'Kids to Adults', src: KA },
+    { name: 'Rating Pending', src: ratingPending },
+    { name: 'Early Childhood', src: earlyChildhood },
     { name: 'PEGI 3', src: Pegi3 }, 
 { name: 'PEGI 7', src: Pegi7 },
     { name: 'PEGI 12', src: Pegi12 }, 
