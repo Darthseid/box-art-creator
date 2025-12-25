@@ -75,74 +75,41 @@ const currentYear = new Date().getFullYear();
 const LOREM_LEGAL = `© ${currentYear} Publisher Name Inc. All rights reserved. Game Title and the Game Title logo are registered trademarks of Publisher Name Inc. The "System" logo is a trademark of Console Manufacturer. Middleware and the Middleware symbol are trademarks of Middleware company. Uses Other Middleware technology. Copyright © ${currentYear - 25}-${currentYear} by Middleware, Inc. All other trademarks and copyrights are the property of their respective owners. Made in Insert Country Here.`;
 
 
-const PS1 = "../public/PS1.webp"
-const PS2 = "../public/PS2.webp"
-const PS3 = "../public/PS3.webp"
-const PS4 = "../public/PS4.webp"
-const PS5 = "../public/PS5.webp"
-const PSP = "../public/PSP.webp"
-const N64 = "../public/N64.webp"
-const DS = "../public/DS.webp"
-const Dreamcast = "../public/Dreamcast.webp"
-const ThreeDS = "../public/3DS.webp"
-const PSVita = "../public/PSVita.webp"
-const NintendoSwitch = "../public/NintendoSwitch.webp"
-const SNES = "../public/SNES.webp"
-const Switch2 = "../public/Switch2.webp"
-const WiiU = "../public/Wii_U.webp"
-const Xbox = "../public/Xbox.webp"
-const Xbox360 = "../public/Xbox360.webp"
-const XboxOne = "../public/XboxOne.webp"
-const GameBoy = "../public/GameBoy.webp"
-const GameBoyAdvance = "../public/GameBoyAdvance.webp"
-const GameBoyColor = "../public/GameBoyColor.webp"
-const GameCube = "../public/GameCube.webp"
-const GFWL = "../public/GFWL.webp"
-const SegaMasterSystem = "../public/SegaMasterSystem.webp"
-const SegaSaturn = "../public/SegaSaturn.webp"
-const SeriesX = "../public/SeriesX.webp"
-const SegaCD = "../public/SegaCD.webp"
-const SegaGenesis = "../public/SegaGenesis.webp"
-const Wii = "../public/Wii.webp"
-const Atari2600 = "../public/Atari2600.webp"
-const NeoGeo = "../public/NeoGeo.png"
-const ThreeDO = "../public/3DO.png"
-const Turbografx16 = "../public/Turbografx.png"
 
 const CONSOLE_TEMPLATES = [
-    { name: "PS1", image: PS1 },
-    { name: "PS2", image: PS2 },
-    { name: "PS3", image: PS3 },
-    { name: "PS4", image: PS4 },
-    { name: "PS5", image: PS5 },
-    { name: "PSP", image: PSP },
-    { name: "N64", image: N64 },
-    { name: "DS", image: DS },
-    { name: "Dreamcast", image: Dreamcast },
-    { name: "3DS", image: ThreeDS }, // JS identifiers can't start with a number
-    { name: "PSVita", image: PSVita },
-    { name: "NintendoSwitch", image: NintendoSwitch },
-    { name: "SNES", image: SNES },
-    { name: "Switch2", image: Switch2 },
-    { name: "WiiU", image: WiiU },
-    { name: "Xbox", image: Xbox },
-    { name: "Xbox360", image: Xbox360 },
-    { name: "XboxOne", image: XboxOne },
-    { name: "GameBoy", image: GameBoy },
-    { name: "GameBoyAdvance", image: GameBoyAdvance },
-    { name: "GameBoyColor", image: GameBoyColor },
-    { name: "GameCube", image: GameCube },
-    { name: "GFWL", image: GFWL },
-    { name: "SegaMasterSystem", image: SegaMasterSystem },
-    { name: "SegaSaturn", image: SegaSaturn },
-    { name: "SeriesX", image: SeriesX },
-    { name: "SegaCD", image: SegaCD },
-    { name: "SegaGenesis", image: SegaGenesis },
-    { name: "Wii", image: Wii },
-    { name: "Atari2600", image: Atari2600 },
-    { name: "NeoGeo", image: NeoGeo },
-    { name: "ThreeDO", image: ThreeDO },
-    { name: "Turbografx16", image: Turbografx16 }
+    { name: "PS1", src: "/PS1.webp" },
+    { name: "PS2", src: "/PS2.webp" },
+    { name: "PS3", src: "/PS3.webp" },
+    { name: "PS4", src: "/PS4.webp" },
+    { name: "PS5", src: "/PS5.webp" },
+    { name: "PSP", src: "/PSP.webp" },
+    { name: "N64", src: "/N64.webp" },
+    { name: "DS", src: "/DS.webp" },
+    { name: "Dreamcast", src: "/Dreamcast.webp" },
+    { name: "3DS", src: "/3DS.webp" },
+    { name: "PSVita", src: "/PS_Vita.webp" },
+    { name: "Nintendo Switch", src: "/NintendoSwitch.webp" },
+    { name: "SNES", src: "/SNES.webp" },
+    { name: "Switch2", src: "/Switch2.webp" },
+    { name: "Wii U", src: "/Wii_U.webp" },
+    { name: "Xbox", src: "/Xbox.webp" },
+    { name: "Xbox 360", src: "/Xbox360.webp" },
+    { name: "Xbox One", src: "/XboxOne.webp" },
+    { name: "Game Boy", src: "/GameBoy.webp" },
+    { name: "Game Boy Advance", src: "/GameBoyAdvance.webp" },
+    { name: "Game Boy Color", src: "/GameBoyColor.webp" },
+    { name: "GameCube", src: "/GameCube.webp" },
+    { name: "GFWL", src: "/GFWL.jpg" },
+    { name: "Sega Master System", src: "/SegaMasterSystem.webp" },
+    { name: "Sega Saturn", src: "/SegaSaturn.webp" },
+    { name: "Series X", src: "/SeriesX.webp" },
+    { name: "Sega CD", src: "/SegaCD.webp" },
+    { name: "Sega Genesis", src: "/SegaGenesis.webp" },
+    { name: "Wii", src: "/Wii.webp" },
+    { name: "Atari 2600", src: "/Atari2600.webp" },
+    { name: "NeoGeo", src: "/NeoGeo.png" },
+    { name: "3DO", src: "/3DO.png" },
+    { name: "Turbografx-16", src: "/Turbografx.png" }
 ];
 
 export default function App() {
@@ -169,10 +136,10 @@ export default function App() {
     }, []);
 
     const [titleText, setTitleText] = useState("SUPER GAME TITLE");
-    const [publisherText, setPublisherText] = useState("Studio Name");
     const [consoleText, setConsoleText] = useState("GAME SYSTEM");
-    // Console template image (default to PS2)
-    const [consoleTemplate, setConsoleTemplate] = useState(CONSOLE_TEMPLATES.find(t => t.name === 'PS2')?.src || CONSOLE_TEMPLATES[0].src);
+    const [publisherText, setPublisherText] = useState("Studio Name");
+    // Console template state: {name, src}
+    const [consoleTemplate, setConsoleTemplate] = useState(CONSOLE_TEMPLATES.find(t => t.name === 'PS2') || CONSOLE_TEMPLATES[0]);
     const [bgImage, setBgImage] = useState(null);
     const [spineColor, setSpineColor] = useState('#2a2a2a');
 
@@ -326,7 +293,7 @@ export default function App() {
 
             {/* Console template image header */}
             <div className="absolute top-0 left-0 right-0 h-12 z-20 flex items-center justify-center border-b border-white/20 bg-transparent">
-                <img src={consoleTemplate} alt="Console Template" className="max-h-10 object-contain" style={{maxWidth: '90%', maxHeight: '40px'}} draggable="false" />
+                <img src={consoleTemplate.src} alt={consoleTemplate.name} className="max-h-10 object-contain" style={{maxWidth: '90%', maxHeight: '40px'}} draggable="false" />
             </div>
 
             <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 mt-8">
@@ -624,8 +591,8 @@ export default function App() {
                                         <button
                                             key={template.name}
                                             type="button"
-                                            className={`border rounded p-1 bg-neutral-900 hover:border-purple-400 transition-all ${consoleTemplate === template.src ? 'border-purple-500 ring-2 ring-purple-400' : 'border-neutral-700'}`}
-                                            onClick={() => setConsoleTemplate(template.src)}
+                                            className={`border rounded p-1 bg-neutral-900 hover:border-purple-400 transition-all ${consoleTemplate.name === template.name ? 'border-purple-500 ring-2 ring-purple-400' : 'border-neutral-700'}`}
+                                            onClick={() => setConsoleTemplate(template)}
                                             title={template.name}
                                             aria-label={`Select template ${template.name}`}
                                         >
