@@ -36,10 +36,8 @@ import CeroB from './assets/b.avif';
 import CeroC from './assets/c.webp';
 import CeroD from './assets/d.png';
 import CeroZ from './assets/Z.png';
-// --- PLACEHOLDER ASSETS (Replace these consts with your imports if working locally) ---
-// e.g. import ratingM from './assets/m.png';
+import Epilepsy_Warning from './assets/Epilepsy.png';
 
-// --- CONSTANTS ---
 const RATING_IMAGES = [
     { name: 'Everyone', src: ratingE },
     { name: 'Everyone 10+', src: ratingE10 },
@@ -76,7 +74,76 @@ const FONTS = [
 const currentYear = new Date().getFullYear();
 const LOREM_LEGAL = `© ${currentYear} Publisher Name Inc. All rights reserved. Game Title and the Game Title logo are registered trademarks of Publisher Name Inc. The "System" logo is a trademark of Console Manufacturer. Middleware and the Middleware symbol are trademarks of Middleware company. Uses Other Middleware technology. Copyright © ${currentYear - 25}-${currentYear} by Middleware, Inc. All other trademarks and copyrights are the property of their respective owners. Made in Insert Country Here.`;
 
-const EPILEPSY_TEXT = "PHOTOSENSITIVE SEIZURES: IF YOU HAVE A HISTORY OF EPILEPSY OR SEIZURES, CONSULT A DOCTOR BEFORE USE. CERTAIN PATTERNS MAY TRIGGER SEIZURES WITH NO PRIOR HISTORY. BEFORE USING AND FOR MORE DETAILS SEE INSTRUCTIONS FOR THIS PRODUCT.";
+
+const PS1 = "../public/PS1.webp"
+const PS2 = "../public/PS2.webp"
+const PS3 = "../public/PS3.webp"
+const PS4 = "../public/PS4.webp"
+const PS5 = "../public/PS5.webp"
+const PSP = "../public/PSP.webp"
+const N64 = "../public/N64.webp"
+const DS = "../public/DS.webp"
+const Dreamcast = "../public/Dreamcast.webp"
+const ThreeDS = "../public/3DS.webp"
+const PSVita = "../public/PSVita.webp"
+const NintendoSwitch = "../public/NintendoSwitch.webp"
+const SNES = "../public/SNES.webp"
+const Switch2 = "../public/Switch2.webp"
+const WiiU = "../public/Wii_U.webp"
+const Xbox = "../public/Xbox.webp"
+const Xbox360 = "../public/Xbox360.webp"
+const XboxOne = "../public/XboxOne.webp"
+const GameBoy = "../public/GameBoy.webp"
+const GameBoyAdvance = "../public/GameBoyAdvance.webp"
+const GameBoyColor = "../public/GameBoyColor.webp"
+const GameCube = "../public/GameCube.webp"
+const GFWL = "../public/GFWL.webp"
+const SegaMasterSystem = "../public/SegaMasterSystem.webp"
+const SegaSaturn = "../public/SegaSaturn.webp"
+const SeriesX = "../public/SeriesX.webp"
+const SegaCD = "../public/SegaCD.webp"
+const SegaGenesis = "../public/SegaGenesis.webp"
+const Wii = "../public/Wii.webp"
+const Atari2600 = "../public/Atari2600.webp"
+const NeoGeo = "../public/NeoGeo.png"
+const ThreeDO = "../public/3DO.png"
+const Turbografx16 = "../public/Turbografx.png"
+
+const CONSOLE_TEMPLATES = [
+    { name: "PS1", image: PS1 },
+    { name: "PS2", image: PS2 },
+    { name: "PS3", image: PS3 },
+    { name: "PS4", image: PS4 },
+    { name: "PS5", image: PS5 },
+    { name: "PSP", image: PSP },
+    { name: "N64", image: N64 },
+    { name: "DS", image: DS },
+    { name: "Dreamcast", image: Dreamcast },
+    { name: "3DS", image: ThreeDS }, // JS identifiers can't start with a number
+    { name: "PSVita", image: PSVita },
+    { name: "NintendoSwitch", image: NintendoSwitch },
+    { name: "SNES", image: SNES },
+    { name: "Switch2", image: Switch2 },
+    { name: "WiiU", image: WiiU },
+    { name: "Xbox", image: Xbox },
+    { name: "Xbox360", image: Xbox360 },
+    { name: "XboxOne", image: XboxOne },
+    { name: "GameBoy", image: GameBoy },
+    { name: "GameBoyAdvance", image: GameBoyAdvance },
+    { name: "GameBoyColor", image: GameBoyColor },
+    { name: "GameCube", image: GameCube },
+    { name: "GFWL", image: GFWL },
+    { name: "SegaMasterSystem", image: SegaMasterSystem },
+    { name: "SegaSaturn", image: SegaSaturn },
+    { name: "SeriesX", image: SeriesX },
+    { name: "SegaCD", image: SegaCD },
+    { name: "SegaGenesis", image: SegaGenesis },
+    { name: "Wii", image: Wii },
+    { name: "Atari2600", image: Atari2600 },
+    { name: "NeoGeo", image: NeoGeo },
+    { name: "ThreeDO", image: ThreeDO },
+    { name: "Turbografx16", image: Turbografx16 }
+];
 
 export default function App() {
     const [viewMode, setViewMode] = useState('front'); // 'front', 'side', 'back'
@@ -104,6 +171,8 @@ export default function App() {
     const [titleText, setTitleText] = useState("SUPER GAME TITLE");
     const [publisherText, setPublisherText] = useState("Studio Name");
     const [consoleText, setConsoleText] = useState("GAME SYSTEM");
+    // Console template image (default to PS2)
+    const [consoleTemplate, setConsoleTemplate] = useState(CONSOLE_TEMPLATES.find(t => t.name === 'PS2')?.src || CONSOLE_TEMPLATES[0].src);
     const [bgImage, setBgImage] = useState(null);
     const [spineColor, setSpineColor] = useState('#2a2a2a');
 
@@ -238,6 +307,7 @@ export default function App() {
         (viewMode === 'back' && ['story', 'legal'].includes(activeTab))
     );
 
+
     const FrontView = ({ showBadges = true }) => (
         <div
             className="relative w-[340px] h-[480px] bg-neutral-900 shadow-2xl rounded-tr-lg rounded-br-lg overflow-hidden border-l-4 border-neutral-700 ring-1 ring-white/10"
@@ -254,8 +324,9 @@ export default function App() {
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0 pointer-events-none opacity-60"></div>
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent z-20 pointer-events-none"></div>
 
-            <div className="absolute top-0 left-0 right-0 h-6 bg-blue-600 z-20 flex items-center px-3 border-b border-white/20">
-                <div className="text-[10px] font-black text-white italic tracking-tighter">{consoleText}</div>
+            {/* Console template image header */}
+            <div className="absolute top-0 left-0 right-0 h-12 z-20 flex items-center justify-center border-b border-white/20 bg-transparent">
+                <img src={consoleTemplate} alt="Console Template" className="max-h-10 object-contain" style={{maxWidth: '90%', maxHeight: '40px'}} draggable="false" />
             </div>
 
             <div className="absolute inset-0 z-10 flex flex-col justify-between p-6 mt-8">
@@ -411,10 +482,13 @@ export default function App() {
             </div>
 
             <div className="relative z-10 p-2 bg-neutral-900 border-t border-neutral-700">
-                <div className="border border-neutral-500 p-1">
-                    <p className="text-[6px] font-bold text-neutral-400 text-center uppercase leading-tight tracking-tighter">
-                        {EPILEPSY_TEXT}
-                    </p>
+                <div className="border border-neutral-500 p-1 flex items-center justify-center">
+                    <img
+                        src={Epilepsy_Warning}
+                        alt="Epilepsy Warning"
+                        className="w-16 h-6 object-contain opacity-80"
+                        draggable="false"
+                    />
                 </div>
             </div>
 
@@ -488,17 +562,16 @@ export default function App() {
                                 ) : (
                                     <input
                                         type="text"
-                                        value={
-                                            viewMode === 'front' && activeTab === 'title' ? titleText :
-                                                viewMode === 'front' && activeTab === 'publisher' ? publisherText :
-                                                    viewMode === 'side' && activeTab === 'title' ? titleText :
-                                                        consoleText
-                                        }
-                                        onChange={(e) => {
-                                            if (activeTab === 'title') setTitleText(e.target.value);
-                                            else if (activeTab === 'publisher') setPublisherText(e.target.value);
-                                            else if (activeTab === 'console') setConsoleText(e.target.value);
-                                        }}
+                    value={
+                        viewMode === 'front' && activeTab === 'title' ? titleText :
+                        viewMode === 'front' && activeTab === 'publisher' ? publisherText :
+                        viewMode === 'side' && activeTab === 'title' ? titleText :
+                        ''
+                    }
+                    onChange={(e) => {
+                        if (activeTab === 'title') setTitleText(e.target.value);
+                        else if (activeTab === 'publisher') setPublisherText(e.target.value);
+                    }}
                                         className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-3 text-neutral-100 focus:ring-2 focus:ring-purple-500 outline-none"
                                     />
                                 )}
@@ -543,7 +616,26 @@ export default function App() {
                             </div>
                             {bgImage && <button onClick={() => setBgImage(null)} className="w-full py-2 bg-red-900/30 text-red-400 border border-red-900/50 rounded-md flex items-center justify-center gap-2"><Trash2 size={16} /> Remove</button>}
 
-                            {/* UPDATED: Rating Selector using defined RATING_IMAGES */}
+                            {/* Console Template Selector */}
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Console Template</label>
+                                <div className="flex gap-2 flex-wrap">
+                                    {CONSOLE_TEMPLATES.map(template => (
+                                        <button
+                                            key={template.name}
+                                            type="button"
+                                            className={`border rounded p-1 bg-neutral-900 hover:border-purple-400 transition-all ${consoleTemplate === template.src ? 'border-purple-500 ring-2 ring-purple-400' : 'border-neutral-700'}`}
+                                            onClick={() => setConsoleTemplate(template.src)}
+                                            title={template.name}
+                                            aria-label={`Select template ${template.name}`}
+                                        >
+                                            <img src={template.src} alt={template.name} className="w-12 h-8 object-contain" draggable="false" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Rating Selector using defined RATING_IMAGES */}
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Rating</label>
                                 <div className="flex gap-2 flex-wrap">
