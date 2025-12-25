@@ -109,7 +109,7 @@ const CONSOLE_TEMPLATES = [
     { name: "Game Boy Advance", src: "/GameBoyAdvance.webp", layout: "full" },
     { name: "Game Boy Color", src: "/GameBoyColor.webp", layout: "full" },
     { name: "3DO", src: "/3DO.png", layout: "full" },
-    { name: "NeoGeo", src: "/NeoGeo.png", layout: "full" },
+    { name: "NeoGeo", src: "/NeoGeo.png", layout: "side" },
     { name: "Sega CD", src: "/SegaCD.webp", layout: "full" },
     { name: "Sega Genesis", src: "/SegaGenesis.webp", layout: "full" },
     { name: "Sega Saturn", src: "/SegaSaturn.webp", layout: "full" },
@@ -140,7 +140,7 @@ export default function App() {
     const [consoleTemplate, setConsoleTemplate] = useState(CONSOLE_TEMPLATES.find(t => t.name === 'PS2') || CONSOLE_TEMPLATES[0]);
     const [bgImage, setBgImage] = useState(null);
     const [spineColor, setSpineColor] = useState('#2a2a2a');
-    const [ratingImage, setRatingImage] = useState(ratingM);
+    const [ratingImage, setRatingImage] = useState(ratingE);
     const [showRating, setShowRating] = useState(true);
 
     // --- Position State (Offsets) ---
@@ -334,7 +334,7 @@ export default function App() {
     const FrontView = ({ showBadges = true }) => {
         return (
             <div
-                className="relative w-[340px] h-[480px] bg-neutral-900 shadow-2xl rounded-tr-lg rounded-br-lg overflow-hidden border-l-4 border-neutral-700 ring-1 ring-white/10"
+                className="relative w-[640px] h-[780px] bg-neutral-900 shadow-2xl rounded-tr-lg rounded-br-lg overflow-hidden border-l-4 border-neutral-700 ring-1 ring-white/10"
                 style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}
             >
                 {/* 1. BACKGROUND (Z-0) */}
@@ -434,7 +434,7 @@ export default function App() {
     };
 
     const SideView = ({ showBadges = true }) => (
-        <div className="relative w-[480px] h-[60px] bg-neutral-800 shadow-xl overflow-hidden flex items-center" style={{ backgroundColor: spineColor }}>
+        <div className="relative w-[960px] h-[120px] bg-neutral-800 shadow-xl overflow-hidden flex items-center" style={{ backgroundColor: spineColor }}>
             <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-black/20 pointer-events-none z-10"></div>
             <div className={`h-full w-[120px] bg-gradient-to-b from-blue-600 to-blue-700 flex items-center justify-center border-r border-black/20 cursor-pointer relative ${showBadges && activeTab === 'console' && viewMode === 'side' ? 'ring-2 ring-purple-500 z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('console'); }}>
                 <span style={{ fontFamily: consoleStyle.fontFamily, fontSize: `${consoleStyle.fontSize}px`, color: consoleStyle.color, fontWeight: consoleStyle.isBold ? 'bold' : 'normal', fontStyle: consoleStyle.isItalic ? 'italic' : 'normal', textDecoration: consoleStyle.isUnderline ? 'underline' : 'none' }}>{consoleText}</span>
@@ -447,7 +447,7 @@ export default function App() {
     );
 
     const BackView = ({ showBadges = true }) => (
-        <div className="relative w-[340px] h-[480px] bg-neutral-900 shadow-2xl rounded-tl-lg rounded-bl-lg overflow-hidden border-r-4 border-neutral-700 ring-1 ring-white/10 flex flex-col" style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}>
+        <div className="relative w-[640px] h-[780px] bg-neutral-900 shadow-2xl rounded-tl-lg rounded-bl-lg overflow-hidden border-r-4 border-neutral-700 ring-1 ring-white/10 flex flex-col" style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}>
             <div className="absolute inset-0 bg-neutral-800 pattern-dots z-0"></div>
             <div className={`relative z-10 p-4 pb-2 cursor-pointer border-2 border-transparent hover:border-white/10 ${showBadges && activeTab === 'story' && viewMode === 'back' ? 'border-purple-500 bg-black/20' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('story'); }}>
                 <h2 style={{ fontFamily: backHeadlineStyle.fontFamily, fontSize: `${backHeadlineStyle.fontSize}px`, color: backHeadlineStyle.color, fontWeight: backHeadlineStyle.isBold ? 'bold' : 'normal', fontStyle: backHeadlineStyle.isItalic ? 'italic' : 'normal', textDecoration: backHeadlineStyle.isUnderline ? 'underline' : 'none', textShadow: backHeadlineStyle.textShadow ? '0px 2px 4px rgba(0,0,0,0.8)' : 'none', textAlign: 'center', lineHeight: 1.1 }}>{backHeadline}</h2>
@@ -545,7 +545,6 @@ export default function App() {
             </div>
             <div className="flex-1 bg-neutral-950 p-8 flex flex-col items-center justify-center overflow-auto relative">
                 <div className="absolute inset-0 pattern-grid opacity-10 pointer-events-none"></div>
-                <div className="mb-8 text-center animate-in fade-in slide-in-from-top-4 z-10"><h2 className="text-xl font-bold text-neutral-300 flex items-center justify-center gap-2">{viewMode === 'front' ? "Front Preview" : viewMode === 'side' ? "Side Preview" : "Back Preview"}</h2><p className="text-sm text-neutral-500">{viewMode === 'side' ? "480 x 60px" : "340 x 480px"}</p></div>
                 <div className="relative group transition-all duration-500 ease-in-out">{viewMode === 'front' && <FrontView />}{viewMode === 'side' && <SideView />}{viewMode === 'back' && <BackView />}</div>
             </div>
             <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
