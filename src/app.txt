@@ -22,6 +22,8 @@ import {
     Palette
 } from 'lucide-react';
 
+// --- ASSET GENERATORS (SVGs) ---
+
 import ratingM from './assets/Mature.png';
 import ratingT from './assets/T.webp';
 import ratingE from './assets/E.png';
@@ -194,9 +196,8 @@ export default function App() {
     });
 
     useEffect(() => {
-        // Load html-to-image from CDN
         const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js";
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
         script.async = true;
         document.body.appendChild(script);
         return () => {
@@ -266,100 +267,91 @@ export default function App() {
     };
 
     const handleExport = async () => {
-        // Ensure library is loaded
-        if (!window.htmlToImage) {
-            alert("Export library is loading. Please wait a moment and try again.");
+        if (!window.html2canvas) {
+            alert("Export library failed to load. Please refresh the page.");
             return;
         }
-
+        
         setIsExporting(true);
 
-        // Helper: normalize color strings via canvas to convert modern CSS functions (oklch) to rgba
-        // This prevents errors in libraries that don't support new CSS color syntaxes yet
-        const normalizeColor = (color) => {
-            try {
-                const ctx = document.createElement('canvas').getContext('2d');
-                ctx.fillStyle = color;
-                return ctx.fillStyle;
-            } catch (e) {
-                return color;
-            }
-        };
-
-        // Prepare: inline-apply computed colors to avoid unsupported color functions
-        const prepareForExport = (root) => {
-            if (!root) return () => { };
-            const elements = [root, ...Array.from(root.querySelectorAll('*'))];
-            const prevStyles = new Map();
-            elements.forEach(el => {
-                const cs = window.getComputedStyle(el);
-                ['backgroundColor', 'color', 'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor'].forEach(prop => {
-                    try {
-                        const val = cs[prop];
-                        if (val && (val.includes('oklch') || val.includes('lab(') || val.includes('oklab') || val.includes('lch(') || val.includes('color('))) {
-                            const norm = normalizeColor(val);
-                            if (norm) {
-                                if (!prevStyles.has(el)) prevStyles.set(el, {});
-                                prevStyles.get(el)[prop] = el.style[prop];
-                                el.style[prop] = norm;
-                            }
-                        }
-                    } catch (e) { }
-                });
-            });
-            return () => {
-                // restore
-                prevStyles.forEach((styles, el) => {
-                    Object.keys(styles).forEach(prop => {
-                        el.style[prop] = styles[prop] || '';
-                    });
-                });
-            };
-        };
-
         try {
-            // Give React time to render any state changes
+            // Give React time to render the export refs
             await new Promise(resolve => setTimeout(resolve, 200));
 
             const timestamp = new Date().getTime();
             const cleanTitle = titleText.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'game';
 
-            const downloadDataUrl = (dataUrl, suffix) => {
+            const downloadCanvas = (canvas, suffix) => {
                 const link = document.createElement('a');
                 link.download = `${cleanTitle}_${suffix}_${timestamp}.png`;
-                link.href = dataUrl;
+                link.href = canvas.toDataURL('image/png');
                 link.click();
             };
 
-            const targets = [
-                { ref: frontExportRef, name: 'front' },
-                { ref: sideExportRef, name: 'side' },
-                { ref: backExportRef, name: 'back' }
-            ];
+            const exportPromises = [];
 
-            for (const t of targets) {
-                const node = t.ref.current;
-                if (!node) continue;
-
-                // Fix colors before export
-                const restore = prepareForExport(node);
-
-                try {
-                    // Use html-to-image's toPng
-                    const dataUrl = await window.htmlToImage.toPng(node, { cacheBust: true, backgroundColor: null });
-                    downloadDataUrl(dataUrl, t.name);
-                    // Small delay between downloads to ensure browser handles them
-                    await new Promise(r => setTimeout(r, 200));
-                } finally {
-                    restore();
-                }
+            // Front
+            if (frontExportRef.current) {
+                exportPromises.push(
+                    window.html2canvas(frontExportRef.current, {
+                        scale: 3,
+                        backgroundColor: null,
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true
+                    }).then(canvas => {
+                        downloadCanvas(canvas, 'front');
+                        return new Promise(resolve => setTimeout(resolve, 100));
+                    })
+                );
             }
 
+            // Side
+            if (sideExportRef.current) {
+                exportPromises.push(
+                    window.html2canvas(sideExportRef.current, {
+                        scale: 3,
+                        backgroundColor: null,
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true
+                    }).then(canvas => {
+                        downloadCanvas(canvas, 'side');
+                        return new Promise(resolve => setTimeout(resolve, 100));
+                    })
+                );
+            }
+
+            // Back
+            if (backExportRef.current) {
+                exportPromises.push(
+                    window.html2canvas(backExportRef.current, {
+                        scale: 3,
+                        backgroundColor: null,
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true
+                    }).then(canvas => {
+                        downloadCanvas(canvas, 'back');
+                        return new Promise(resolve => setTimeout(resolve, 100));
+                    })
+                );
+            }
+
+            if (exportPromises.length === 0) {
+                alert("No elements found to export.");
+                setIsExporting(false);
+                return;
+            }
+
+            // Wait for all exports sequentially
+            await Promise.all(exportPromises);
             setIsExporting(false);
+
         } catch (err) {
-            console.error('Export failed:', err);
+            console.error("Export failed:", err);
             setIsExporting(false);
-            alert(`Export failed: ${err.message || 'Unknown error'}`);
+            alert(`Export failed: ${err.message || "Unknown error"}`);
         }
     };
 
@@ -402,22 +394,22 @@ export default function App() {
     const FrontView = ({ showBadges = true }) => {
         return (
             <div
-                className="relative w-[540px] h-[680px] bg-[#171717] shadow-2xl rounded-tr-lg rounded-br-lg overflow-hidden border-l-4 border-[#404040] ring-1 ring-[#ffffff1a]"
+                className="relative w-[540px] h-[680px] bg-neutral-900 shadow-2xl rounded-tr-lg rounded-br-lg overflow-hidden border-l-4 border-neutral-700 ring-1 ring-white/10"
                 style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}
             >
                 {/* 1. BACKGROUND (Z-0) */}
                 {bgImage ? (
                     <img src={bgImage} alt="Background" className="absolute inset-0 w-full h-full object-cover z-0" />
                 ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-[#404040] bg-[#262626] z-0">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-700 bg-neutral-800 z-0">
                         <ImageIcon size={64} className="mb-2 opacity-20" />
                         <span className="text-sm font-mono uppercase tracking-widest opacity-30">No Image</span>
                     </div>
                 )}
 
                 {/* 2. GRADIENTS (Z-0) */}
-                <div className="absolute inset-0 bg-gradient-to-b from-[#00000099] via-transparent to-[#000000cc] z-0 pointer-events-none opacity-60"></div>
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[#ffffff0d] to-transparent z-20 pointer-events-none"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0 pointer-events-none opacity-60"></div>
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent z-20 pointer-events-none"></div>
 
                 {/* 3. CONSOLE TEMPLATE (Z-20) */}
                 {consoleTemplate.layout === 'top' && (
@@ -441,7 +433,7 @@ export default function App() {
 
                     {/* TITLE */}
                     <div
-                        className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'title' && viewMode === 'front' ? 'border-[#a855f7] bg-[#00000033] backdrop-blur-sm' : 'border-transparent hover:border-[#ffffff33]'}`}
+                        className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'title' && viewMode === 'front' ? 'border-purple-500 bg-black/20 backdrop-blur-sm' : 'border-transparent hover:border-white/20'}`}
                         style={{
                             top: '120px',
                             left: '0',
@@ -453,7 +445,7 @@ export default function App() {
                         onMouseDown={(e) => handleMouseDown(e, 'title')}
                         onClick={(e) => { e.stopPropagation(); setViewMode('front'); setActiveTab('title'); }}
                     >
-                        {showBadges && activeTab === 'title' && viewMode === 'front' && <div className="absolute -top-3 left-2 bg-[#a855f7] text-white text-[10px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
+                        {showBadges && activeTab === 'title' && viewMode === 'front' && <div className="absolute -top-3 left-2 bg-purple-500 text-white text-[10px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
                         <h1 style={{
                             fontFamily: titleStyle.fontFamily, fontSize: `${titleStyle.fontSize}px`, color: titleStyle.color,
                             fontWeight: titleStyle.isBold ? 'bold' : 'normal', fontStyle: titleStyle.isItalic ? 'italic' : 'normal',
@@ -464,7 +456,7 @@ export default function App() {
 
                     {/* PUBLISHER */}
                     <div
-                        className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'publisher' && viewMode === 'front' ? 'border-[#a855f7] bg-[#00000033] backdrop-blur-sm' : 'border-transparent hover:border-[#ffffff33]'}`}
+                        className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'publisher' && viewMode === 'front' ? 'border-purple-500 bg-black/20 backdrop-blur-sm' : 'border-transparent hover:border-white/20'}`}
                         style={{
                             bottom: '100px',
                             right: '20px',
@@ -473,7 +465,7 @@ export default function App() {
                         onMouseDown={(e) => handleMouseDown(e, 'publisher')}
                         onClick={(e) => { e.stopPropagation(); setViewMode('front'); setActiveTab('publisher'); }}
                     >
-                        {showBadges && activeTab === 'publisher' && viewMode === 'front' && <div className="absolute -top-3 right-2 bg-[#a855f7] text-white text-[10px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
+                        {showBadges && activeTab === 'publisher' && viewMode === 'front' && <div className="absolute -top-3 right-2 bg-purple-500 text-white text-[10px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
                         <p style={{
                             fontFamily: publisherStyle.fontFamily, fontSize: `${publisherStyle.fontSize}px`, color: publisherStyle.color,
                             fontWeight: publisherStyle.isBold ? 'bold' : 'normal', fontStyle: publisherStyle.isItalic ? 'italic' : 'normal',
@@ -485,7 +477,7 @@ export default function App() {
                     {/* ESRB RATING */}
                     {showRating && (
                         <div
-                            className="absolute pointer-events-auto cursor-move w-10 h-14 bg-[#ffffff99] border border-black shadow-md flex flex-col items-center justify-center overflow-hidden hover:ring-2 hover:ring-[#a855f7]"
+                            className="absolute pointer-events-auto cursor-move w-10 h-14 bg-white/90 border border-black shadow-md flex flex-col items-center justify-center overflow-hidden hover:ring-2 hover:ring-purple-500"
                             style={{
                                 bottom: '20px',
                                 left: '20px',
@@ -502,13 +494,13 @@ export default function App() {
     };
 
     const SideView = ({ showBadges = true }) => (
-        <div className="relative w-[960px] h-[120px] bg-[#262626] shadow-xl overflow-hidden flex items-center" style={{ backgroundColor: spineColor }}>
-            <div className="absolute inset-0 bg-gradient-to-b from-[#ffffff1a] to-[#00000033] pointer-events-none z-10"></div>
-            <div className={`h-full w-[120px] bg-gradient-to-b from-[#2563eb] to-[#1d4ed8] flex items-center justify-center border-r border-[#00000033] cursor-pointer relative ${showBadges && activeTab === 'console' && viewMode === 'side' ? 'ring-2 ring-[#a855f7] z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('console'); }}>
+        <div className="relative w-[960px] h-[120px] bg-neutral-800 shadow-xl overflow-hidden flex items-center" style={{ backgroundColor: spineColor }}>
+            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-black/20 pointer-events-none z-10"></div>
+            <div className={`h-full w-[120px] bg-gradient-to-b from-blue-600 to-blue-700 flex items-center justify-center border-r border-black/20 cursor-pointer relative ${showBadges && activeTab === 'console' && viewMode === 'side' ? 'ring-2 ring-purple-500 z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('console'); }}>
                 <span style={{ fontFamily: consoleStyle.fontFamily, fontSize: `${consoleStyle.fontSize}px`, color: consoleStyle.color, fontWeight: consoleStyle.isBold ? 'bold' : 'normal', fontStyle: consoleStyle.isItalic ? 'italic' : 'normal', textDecoration: consoleStyle.isUnderline ? 'underline' : 'none' }}>{consoleText}</span>
             </div>
-            <div className={`flex-1 h-full flex items-center justify-center px-4 cursor-pointer relative ${showBadges && activeTab === 'title' && viewMode === 'side' ? 'bg-[#0000001a] ring-2 ring-[#a855f7] z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('title'); }}>
-                {showBadges && activeTab === 'title' && viewMode === 'side' && <div className="absolute -top-2 right-2 bg-[#a855f7] text-white text-[8px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
+            <div className={`flex-1 h-full flex items-center justify-center px-4 cursor-pointer relative ${showBadges && activeTab === 'title' && viewMode === 'side' ? 'bg-black/10 ring-2 ring-purple-500 z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('title'); }}>
+                {showBadges && activeTab === 'title' && viewMode === 'side' && <div className="absolute -top-2 right-2 bg-purple-500 text-white text-[8px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
                 <span style={{ fontFamily: sideTitleStyle.fontFamily, fontSize: `${sideTitleStyle.fontSize}px`, color: sideTitleStyle.color, fontWeight: sideTitleStyle.isBold ? 'bold' : 'normal', fontStyle: sideTitleStyle.isItalic ? 'italic' : 'normal', textDecoration: sideTitleStyle.isUnderline ? 'underline' : 'none', textShadow: sideTitleStyle.textShadow ? '1px 1px 2px rgba(0,0,0,0.8)' : 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{titleText}</span>
             </div>
         </div>
@@ -516,50 +508,50 @@ export default function App() {
 
     const BackView = ({ showBadges = true }) => (
         <div
-            className="relative w-[540px] h-[680px] shadow-2xl rounded-tl-lg rounded-bl-lg overflow-hidden border-r-4 border-[#404040] ring-1 ring-[#ffffff1a] flex flex-col transition-colors duration-200"
+            className="relative w-[540px] h-[680px] shadow-2xl rounded-tl-lg rounded-bl-lg overflow-hidden border-r-4 border-neutral-700 ring-1 ring-white/10 flex flex-col transition-colors duration-200"
             style={{ backgroundColor: backBgColor }}
         >
-            <div className="absolute inset-0 bg-[#262626] pattern-dots z-0 opacity-10 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-neutral-800 pattern-dots z-0 opacity-10 pointer-events-none"></div>
 
             {/* Headline */}
-            <div className={`relative z-10 p-4 pb-2 cursor-pointer border-2 border-transparent hover:border-[#ffffff1a] ${showBadges && activeTab === 'story' && viewMode === 'back' ? 'border-[#a855f7] bg-[#00000033]' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('story'); }}>
+            <div className={`relative z-10 p-4 pb-2 cursor-pointer border-2 border-transparent hover:border-white/10 ${showBadges && activeTab === 'story' && viewMode === 'back' ? 'border-purple-500 bg-black/20' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('story'); }}>
                 <h2 style={{ fontFamily: backHeadlineStyle.fontFamily, fontSize: `${backHeadlineStyle.fontSize}px`, color: backHeadlineStyle.color, fontWeight: backHeadlineStyle.isBold ? 'bold' : 'normal', fontStyle: backHeadlineStyle.isItalic ? 'italic' : 'normal', textDecoration: backHeadlineStyle.isUnderline ? 'underline' : 'none', textShadow: backHeadlineStyle.textShadow ? '0px 2px 4px rgba(0,0,0,0.8)' : 'none', textAlign: 'center', lineHeight: 1.1 }}>{backHeadline}</h2>
             </div>
 
             {/* NEW: Description Paragraph */}
-            <div className={`relative z-10 px-4 pb-2 cursor-pointer border-2 border-transparent hover:border-[#ffffff1a] ${showBadges && activeTab === 'description' && viewMode === 'back' ? 'border-[#a855f7] bg-[#00000033]' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('description'); }}>
+            <div className={`relative z-10 px-4 pb-2 cursor-pointer border-2 border-transparent hover:border-white/10 ${showBadges && activeTab === 'description' && viewMode === 'back' ? 'border-purple-500 bg-black/20' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('description'); }}>
                 <p style={{ fontFamily: backDescriptionStyle.fontFamily, fontSize: `${backDescriptionStyle.fontSize}px`, color: backDescriptionStyle.color, fontWeight: backDescriptionStyle.isBold ? 'bold' : 'normal', fontStyle: backDescriptionStyle.isItalic ? 'italic' : 'normal', textDecoration: backDescriptionStyle.isUnderline ? 'underline' : 'none', textShadow: backDescriptionStyle.textShadow ? '0px 1px 2px rgba(0,0,0,0.8)' : 'none', textAlign: backDescriptionStyle.textAlign }}>{backDescription}</p>
             </div>
 
             <div className="relative z-10 px-4 py-2 flex gap-2 justify-center h-[100px]">
                 {backScreenshots.map((shot, idx) => (
-                    <div key={idx} className={`flex-1 bg-black rounded overflow-hidden border border-[#525252] relative cursor-pointer group ${showBadges && activeTab === 'shots' && viewMode === 'back' ? 'ring-2 ring-[#a855f7]' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('shots'); setActiveScreenshotIndex(idx); }}>
-                        {shot ? <img src={shot} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={16} className="text-[#525252]" /></div>}
-                        {showBadges && activeTab === 'shots' && viewMode === 'back' && <div className="absolute inset-0 bg-[#a855f733] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-[8px] font-bold text-white bg-[#00000080] px-1 rounded">EDIT</span></div>}
+                    <div key={idx} className={`flex-1 bg-black rounded overflow-hidden border border-neutral-600 relative cursor-pointer group ${showBadges && activeTab === 'shots' && viewMode === 'back' ? 'ring-2 ring-purple-500' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('shots'); setActiveScreenshotIndex(idx); }}>
+                        {shot ? <img src={shot} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={16} className="text-neutral-600" /></div>}
+                        {showBadges && activeTab === 'shots' && viewMode === 'back' && <div className="absolute inset-0 bg-purple-500/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-[8px] font-bold text-white bg-black/50 px-1 rounded">EDIT</span></div>}
                     </div>
                 ))}
             </div>
             <div className="relative z-10 px-4 py-2 flex gap-2">
-                <div className={`w-1/3 bg-[#f5f5f5] text-black p-2 rounded-sm text-[8px] font-bold space-y-1 cursor-pointer border-2 ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-[#a855f7]' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('specs'); }}>
-                    <div className="flex items-center gap-1 border-b border-[#d4d4d4] pb-1"><Gamepad2 size={10} /> <span>{specsData.players}</span></div>
-                    <div className="flex items-center gap-1 border-b border-[#d4d4d4] pb-1"><Box size={10} /> <span>{specsData.storage}</span></div>
+                <div className={`w-1/3 bg-neutral-100 text-black p-2 rounded-sm text-[8px] font-bold space-y-1 cursor-pointer border-2 ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-purple-500' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('specs'); }}>
+                    <div className="flex items-center gap-1 border-b border-neutral-300 pb-1"><Gamepad2 size={10} /> <span>{specsData.players}</span></div>
+                    <div className="flex items-center gap-1 border-b border-neutral-300 pb-1"><Box size={10} /> <span>{specsData.storage}</span></div>
                     <div className="flex items-center gap-1"><Monitor size={10} /> <span>{specsData.online}</span></div>
                 </div>
-                <div className={`flex-1 flex items-center justify-center text-center p-2 cursor-pointer border-2 rounded ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-[#a855f7]' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('specs'); }}><p className="text-[10px] text-[#d4d4d4] font-bold uppercase leading-tight">{backLogosText}</p></div>
+                <div className={`flex-1 flex items-center justify-center text-center p-2 cursor-pointer border-2 rounded ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-purple-500' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('specs'); }}><p className="text-[10px] text-neutral-300 font-bold uppercase leading-tight">{backLogosText}</p></div>
             </div>
             <div className="relative z-10 px-4 py-2 flex-1 flex items-end">
-                <div className={`w-full cursor-pointer border-2 rounded p-1 ${showBadges && activeTab === 'legal' && viewMode === 'back' ? 'border-[#a855f7]' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('legal'); }}><p style={{ fontFamily: backLegalStyle.fontFamily, fontSize: `${backLegalStyle.fontSize}px`, color: backLegalStyle.color, fontWeight: backLegalStyle.isBold ? 'bold' : 'normal', fontStyle: backLegalStyle.isItalic ? 'italic' : 'normal', textDecoration: backLegalStyle.isUnderline ? 'underline' : 'none', textAlign: 'justify' }}>{backLegalText}</p></div>
+                <div className={`w-full cursor-pointer border-2 rounded p-1 ${showBadges && activeTab === 'legal' && viewMode === 'back' ? 'border-purple-500' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('legal'); }}><p style={{ fontFamily: backLegalStyle.fontFamily, fontSize: `${backLegalStyle.fontSize}px`, color: backLegalStyle.color, fontWeight: backLegalStyle.isBold ? 'bold' : 'normal', fontStyle: backLegalStyle.isItalic ? 'italic' : 'normal', textDecoration: backLegalStyle.isUnderline ? 'underline' : 'none', textAlign: 'justify' }}>{backLegalText}</p></div>
             </div>
-            <div className="relative z-10 p-2 border-t border-neutral-700 h-24" style={{ backgroundColor: backBgColor }}>
+            <div className="relative z-10 p-2 bg-neutral-900 border-t border-neutral-700 h-24">
                 <div className="flex w-full h-full gap-2">
                     {/* LEFT: Expanded ESRB Rating */}
                     {showRating && (
                         <div
-                            className={`flex-1 flex gap-1 p-1 items-center justify-start bg-black/50 cursor-pointer border-2 ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-[#a855f7]' : 'border-transparent'}`}
+                            className={`flex-1 flex gap-1 p-1 items-center justify-start bg-black/50 cursor-pointer border-2 ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-purple-500' : 'border-transparent'}`}
                             onClick={() => { setViewMode('back'); setActiveTab('specs'); }}
                         >
                             {/* ESRB Rating Image */}
-                            <div className="w-12 h-20 flex-shrink-0 flex items-center justify-center bg-[#ffffff] rounded border border-black overflow-hidden">
+                            <div className="w-12 h-20 flex-shrink-0 flex items-center justify-center bg-white/90 rounded border border-black overflow-hidden">
                                 <img src={ratingImage} alt="Rating" className="w-full h-full object-contain" draggable="false" />
                             </div>
                             {/* ESRB Box with Content */}
