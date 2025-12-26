@@ -14,12 +14,9 @@ import {
     Trash2,
     FileText,
     Gamepad2,
-    AlertTriangle,
     Upload,
-    Move,
     Eye,
     EyeOff,
-    Palette
 } from 'lucide-react';
 
 import ratingM from './assets/Mature.png';
@@ -81,9 +78,7 @@ const FONTS = [
 const currentYear = new Date().getFullYear();
 const LOREM_LEGAL = `© ${currentYear} Publisher Name Inc. All rights reserved. Game Title and the Game Title logo are registered trademarks of Publisher Name Inc. The "System" logo is a trademark of Console Manufacturer. Middleware and the Middleware symbol are trademarks of Middleware company. Uses Other Middleware technology. Copyright © ${currentYear - 25}-${currentYear} by Middleware, Inc. All other trademarks and copyrights are the property of their respective owners. Made in Insert Country Here.`;
 
-// Layout types: 'top', 'side', 'full' (for special cases like Atari, SNES, SMS which cover specific complex areas)
 const CONSOLE_TEMPLATES = [
-    // --- TOP BARS ---
     { name: "PS2", src: "/PS2.webp", layout: "top" },
     { name: "PS3", src: "/PS3.webp", layout: "top" },
     { name: "PS4", src: "/PS4.jpg", layout: "top" },
@@ -102,7 +97,6 @@ const CONSOLE_TEMPLATES = [
     { name: "GFWL", src: "/GFWL.jpg", layout: "top" },
     { name: "Turbografx-16", src: "/Turbografx.png", layout: "top" },
 
-    // --- SIDE BARS ---
     { name: "DS", src: "/DS.webp", layout: "full" },
     { name: "3DS", src: "/3DS.webp", layout: "full" },
     { name: "N64", src: "/N64.webp", layout: "full" },
@@ -117,7 +111,6 @@ const CONSOLE_TEMPLATES = [
     { name: "Dreamcast", src: "/Dreamcast.webp", layout: "full" },
     { name: "PS1", src: "/PS1.webp", layout: "full" }, // Usually side/spine based on exclusion from top list
 
-    // --- SPECIAL CASES (FULL FRAME OVERLAYS) ---
     { name: "Atari 2600", src: "/Atari2600.webp", layout: "full" }, // 4 sides frame
     { name: "SNES", src: "/SNES.webp", layout: "full" }, // Right and Bottom
     { name: "Sega Master System", src: "/SegaMasterSystem.webp", layout: "full" },
@@ -135,28 +128,24 @@ export default function App() {
     const sideExportRef = useRef(null);
     const backExportRef = useRef(null);
 
-    // --- Content State ---
     const [titleText, setTitleText] = useState("SUPER GAME TITLE");
     const [consoleText, setConsoleText] = useState("GAME SYSTEM");
     const [publisherText, setPublisherText] = useState("Studio Name");
     const [consoleTemplate, setConsoleTemplate] = useState(CONSOLE_TEMPLATES.find(t => t.name === 'PS2') || CONSOLE_TEMPLATES[0]);
     const [bgImage, setBgImage] = useState(null);
     const [spineColor, setSpineColor] = useState('#2a2a2a');
-    const [ratingImage, setRatingImage] = useState(ratingM);
+    const [ratingImage, setRatingImage] = useState(ratingE);
     const [showRating, setShowRating] = useState(true);
     const [backBgColor, setBackBgColor] = useState('#262626');
 
-    // --- Position State (Offsets) ---
     const [titlePos, setTitlePos] = useState({ x: 0, y: 0 });
     const [publisherPos, setPublisherPos] = useState({ x: 0, y: 0 });
     const [ratingPos, setRatingPos] = useState({ x: 0, y: 0 });
 
-    // --- Dragging State ---
     const [draggingItem, setDraggingItem] = useState(null); // 'title', 'publisher', 'rating'
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [initialDragPos, setInitialDragPos] = useState({ x: 0, y: 0 });
 
-    // --- Back View State ---
     const [backHeadline, setBackHeadline] = useState("EPIC PROMOTIONAL GAME BLURB");
     const [backDescription, setBackDescription] = useState("Experience the ultimate adventure in this breathtaking open-world masterpiece. Explore vast landscapes, battle fearsome creatures, and uncover ancient secrets. Will you save the world or destroy it? The choice is yours in this unforgettable journey.");
     const [backScreenshots, setBackScreenshots] = useState([null, null, null]);
@@ -168,9 +157,8 @@ export default function App() {
     });
     const [backLogosText, setBackLogosText] = useState("Game Publisher • Game Developer • Middleware Logo");
     const [backLegalText, setBackLegalText] = useState(LOREM_LEGAL);
-    const [esrbContent, setEsrbContent] = useState("Contains: Violence, Blood, Language");
+    const [esrbContent, setEsrbContent] = useState("Strong Lyrics \n Fantasy Violence \n Partial Nudity");
 
-    // --- Styles State ---
     const [titleStyle, setTitleStyle] = useState({
         fontFamily: 'Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif', fontSize: 42, color: '#ffffff', isBold: false, isItalic: false, isUnderline: false, textShadow: true
     });
@@ -194,7 +182,6 @@ export default function App() {
     });
 
     useEffect(() => {
-        // Load html-to-image from CDN
         const script = document.createElement('script');
         script.src = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js";
         script.async = true;
@@ -206,7 +193,6 @@ export default function App() {
         }
     }, []);
 
-    // --- DRAG HANDLERS ---
     const handleMouseDown = (e, item) => {
         if (isExporting) return;
         e.preventDefault();
@@ -266,16 +252,12 @@ export default function App() {
     };
 
     const handleExport = async () => {
-        // Ensure library is loaded
         if (!window.htmlToImage) {
             alert("Export library is loading. Please wait a moment and try again.");
             return;
         }
 
         setIsExporting(true);
-
-        // Helper: normalize color strings via canvas to convert modern CSS functions (oklch) to rgba
-        // This prevents errors in libraries that don't support new CSS color syntaxes yet
         const normalizeColor = (color) => {
             try {
                 const ctx = document.createElement('canvas').getContext('2d');
@@ -285,8 +267,6 @@ export default function App() {
                 return color;
             }
         };
-
-        // Prepare: inline-apply computed colors to avoid unsupported color functions
         const prepareForExport = (root) => {
             if (!root) return () => { };
             const elements = [root, ...Array.from(root.querySelectorAll('*'))];
@@ -318,7 +298,6 @@ export default function App() {
         };
 
         try {
-            // Give React time to render any state changes
             await new Promise(resolve => setTimeout(resolve, 200));
 
             const timestamp = new Date().getTime();
@@ -341,14 +320,11 @@ export default function App() {
                 const node = t.ref.current;
                 if (!node) continue;
 
-                // Fix colors before export
                 const restore = prepareForExport(node);
 
                 try {
-                    // Use html-to-image's toPng
                     const dataUrl = await window.htmlToImage.toPng(node, { cacheBust: true, backgroundColor: null });
                     downloadDataUrl(dataUrl, t.name);
-                    // Small delay between downloads to ensure browser handles them
                     await new Promise(r => setTimeout(r, 200));
                 } finally {
                     restore();
@@ -397,7 +373,6 @@ export default function App() {
         (viewMode === 'back' && ['story', 'description', 'legal'].includes(activeTab))
     );
 
-    // --- VIEWS ---
 
     const FrontView = ({ showBadges = true }) => {
         return (
@@ -405,7 +380,6 @@ export default function App() {
                 className="relative w-[540px] h-[680px] bg-[#171717] shadow-2xl rounded-tr-lg rounded-br-lg overflow-hidden border-l-4 border-[#404040] ring-1 ring-[#ffffff1a]"
                 style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}
             >
-                {/* 1. BACKGROUND (Z-0) */}
                 {bgImage ? (
                     <img src={bgImage} alt="Background" className="absolute inset-0 w-full h-full object-cover z-0" />
                 ) : (
@@ -415,11 +389,9 @@ export default function App() {
                     </div>
                 )}
 
-                {/* 2. GRADIENTS (Z-0) */}
                 <div className="absolute inset-0 bg-gradient-to-b from-[#00000099] via-transparent to-[#000000cc] z-0 pointer-events-none opacity-60"></div>
                 <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[#ffffff0d] to-transparent z-20 pointer-events-none"></div>
 
-                {/* 3. CONSOLE TEMPLATE (Z-20) */}
                 {consoleTemplate.layout === 'top' && (
                     <div className="absolute top-0 left-0 right-0 z-20 w-full">
                         <img src={consoleTemplate.src} alt={consoleTemplate.name} className="w-full h-auto object-contain" draggable="false" />
@@ -436,10 +408,8 @@ export default function App() {
                     </div>
                 )}
 
-                {/* 4. DRAGGABLE CONTENT (Z-30) */}
                 <div className="absolute inset-0 z-30 pointer-events-none">
 
-                    {/* TITLE */}
                     <div
                         className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'title' && viewMode === 'front' ? 'border-[#a855f7] bg-[#00000033] backdrop-blur-sm' : 'border-transparent hover:border-[#ffffff33]'}`}
                         style={{
@@ -462,7 +432,6 @@ export default function App() {
                         }}>{titleText}</h1>
                     </div>
 
-                    {/* PUBLISHER */}
                     <div
                         className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'publisher' && viewMode === 'front' ? 'border-[#a855f7] bg-[#00000033] backdrop-blur-sm' : 'border-transparent hover:border-[#ffffff33]'}`}
                         style={{
@@ -482,7 +451,6 @@ export default function App() {
                         }}>{publisherText}</p>
                     </div>
 
-                    {/* ESRB RATING */}
                     {showRating && (
                         <div
                             className="absolute pointer-events-auto cursor-move w-10 h-14 bg-[#ffffff99] border border-black shadow-md flex flex-col items-center justify-center overflow-hidden hover:ring-2 hover:ring-[#a855f7]"
@@ -521,12 +489,10 @@ export default function App() {
         >
             <div className="absolute inset-0 bg-[#262626] pattern-dots z-0 opacity-10 pointer-events-none"></div>
 
-            {/* Headline */}
             <div className={`relative z-10 p-4 pb-2 cursor-pointer border-2 border-transparent hover:border-[#ffffff1a] ${showBadges && activeTab === 'story' && viewMode === 'back' ? 'border-[#a855f7] bg-[#00000033]' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('story'); }}>
                 <h2 style={{ fontFamily: backHeadlineStyle.fontFamily, fontSize: `${backHeadlineStyle.fontSize}px`, color: backHeadlineStyle.color, fontWeight: backHeadlineStyle.isBold ? 'bold' : 'normal', fontStyle: backHeadlineStyle.isItalic ? 'italic' : 'normal', textDecoration: backHeadlineStyle.isUnderline ? 'underline' : 'none', textShadow: backHeadlineStyle.textShadow ? '0px 2px 4px rgba(0,0,0,0.8)' : 'none', textAlign: 'center', lineHeight: 1.1 }}>{backHeadline}</h2>
             </div>
 
-            {/* NEW: Description Paragraph */}
             <div className={`relative z-10 px-4 pb-2 cursor-pointer border-2 border-transparent hover:border-[#ffffff1a] ${showBadges && activeTab === 'description' && viewMode === 'back' ? 'border-[#a855f7] bg-[#00000033]' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('description'); }}>
                 <p style={{ fontFamily: backDescriptionStyle.fontFamily, fontSize: `${backDescriptionStyle.fontSize}px`, color: backDescriptionStyle.color, fontWeight: backDescriptionStyle.isBold ? 'bold' : 'normal', fontStyle: backDescriptionStyle.isItalic ? 'italic' : 'normal', textDecoration: backDescriptionStyle.isUnderline ? 'underline' : 'none', textShadow: backDescriptionStyle.textShadow ? '0px 1px 2px rgba(0,0,0,0.8)' : 'none', textAlign: backDescriptionStyle.textAlign }}>{backDescription}</p>
             </div>
@@ -552,17 +518,14 @@ export default function App() {
             </div>
             <div className="relative z-10 p-2 border-t border-neutral-700 h-24" style={{ backgroundColor: backBgColor }}>
                 <div className="flex w-full h-full gap-2">
-                    {/* LEFT: Expanded ESRB Rating */}
                     {showRating && (
                         <div
                             className={`flex-1 flex gap-1 p-1 items-center justify-start bg-black/50 cursor-pointer border-2 ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-[#a855f7]' : 'border-transparent'}`}
                             onClick={() => { setViewMode('back'); setActiveTab('specs'); }}
                         >
-                            {/* ESRB Rating Image */}
                             <div className="w-12 h-20 flex-shrink-0 flex items-center justify-center bg-[#ffffff] rounded border border-black overflow-hidden">
                                 <img src={ratingImage} alt="Rating" className="w-full h-full object-contain" draggable="false" />
                             </div>
-                            {/* ESRB Box with Content */}
                             <div className="flex-1 h-full flex flex-col items-center justify-center relative overflow-hidden">
                                 <img src={ESRB_Box} alt="ESRB Box" className="absolute inset-0 w-full h-full object-fill" draggable="false" />
                                 <p className="relative z-10 text-[6px] text-black text-center px-1 font-bold leading-tight line-clamp-2">{esrbContent}</p>
@@ -570,12 +533,10 @@ export default function App() {
                         </div>
                     )}
 
-                    {/* CENTER: Epilepsy Warning */}
                     <div className="flex-1 p-1 flex items-center justify-center">
                         <img src={Epilepsy_Warning} className="w-full h-full object-contain opacity-80" draggable="false" alt="Epilepsy Warning" />
                     </div>
 
-                    {/* RIGHT: Barcode */}
                     <div className="flex-1 p-1 flex items-center justify-center">
                         <img src={Barcode} className="w-full h-full object-contain opacity-80" draggable="false" alt="Barcode" />
                     </div>
@@ -629,7 +590,6 @@ export default function App() {
                             <div className="border-2 border-dashed border-neutral-600 rounded-xl p-8 flex flex-col items-center justify-center text-center hover:border-purple-500 hover:bg-purple-900/5 transition-all cursor-pointer group" onClick={() => fileInputRef.current?.click()}>{bgImage ? <img src={bgImage} className="w-16 h-16 object-cover rounded-full mb-4 opacity-50" /> : <ImageIcon className="text-neutral-400 mb-4" size={32} />}<h3 className="font-bold text-neutral-200">Cover Art</h3><input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} /></div>
                             {bgImage && <button onClick={() => setBgImage(null)} className="w-full py-2 bg-red-900/30 text-red-400 border border-red-900/50 rounded-md flex items-center justify-center gap-2"><Trash2 size={16} /> Remove</button>}
 
-                            {/* Toggle Rating Visibility */}
                             <div className="flex items-center justify-between p-3 bg-neutral-900 rounded-md border border-neutral-700">
                                 <span className="text-sm font-medium flex items-center gap-2">
                                     {showRating ? <Eye size={16} /> : <EyeOff size={16} />}
@@ -652,7 +612,6 @@ export default function App() {
                     )}
                     {viewMode === 'back' && activeTab === 'shots' && (
                         <div className="space-y-6 animate-in fade-in duration-300">
-                            {/* Back Background Color Picker */}
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Back Background Color</label>
                                 <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-600 rounded-md p-1">
