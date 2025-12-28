@@ -14,15 +14,10 @@ import {
     Trash2,
     FileText,
     Gamepad2,
-    AlertTriangle,
     Upload,
-    Move,
     Eye,
     EyeOff,
-    Palette
 } from 'lucide-react';
-
-// --- ASSET GENERATORS (SVGs) ---
 
 import ratingM from './assets/Mature.png';
 import ratingT from './assets/T.webp';
@@ -83,9 +78,7 @@ const FONTS = [
 const currentYear = new Date().getFullYear();
 const LOREM_LEGAL = `© ${currentYear} Publisher Name Inc. All rights reserved. Game Title and the Game Title logo are registered trademarks of Publisher Name Inc. The "System" logo is a trademark of Console Manufacturer. Middleware and the Middleware symbol are trademarks of Middleware company. Uses Other Middleware technology. Copyright © ${currentYear - 25}-${currentYear} by Middleware, Inc. All other trademarks and copyrights are the property of their respective owners. Made in Insert Country Here.`;
 
-// Layout types: 'top', 'side', 'full' (for special cases like Atari, SNES, SMS which cover specific complex areas)
 const CONSOLE_TEMPLATES = [
-    // --- TOP BARS ---
     { name: "PS2", src: "/PS2.webp", layout: "top" },
     { name: "PS3", src: "/PS3.webp", layout: "top" },
     { name: "PS4", src: "/PS4.jpg", layout: "top" },
@@ -104,7 +97,6 @@ const CONSOLE_TEMPLATES = [
     { name: "GFWL", src: "/GFWL.jpg", layout: "top" },
     { name: "Turbografx-16", src: "/Turbografx.png", layout: "top" },
 
-    // --- SIDE BARS ---
     { name: "DS", src: "/DS.webp", layout: "full" },
     { name: "3DS", src: "/3DS.webp", layout: "full" },
     { name: "N64", src: "/N64.webp", layout: "full" },
@@ -119,23 +111,19 @@ const CONSOLE_TEMPLATES = [
     { name: "Dreamcast", src: "/Dreamcast.webp", layout: "full" },
     { name: "PS1", src: "/PS1.webp", layout: "full" }, // Usually side/spine based on exclusion from top list
 
-    // --- SPECIAL CASES (FULL FRAME OVERLAYS) ---
     { name: "Atari 2600", src: "/Atari2600.webp", layout: "full" }, // 4 sides frame
     { name: "SNES", src: "/SNES.webp", layout: "full" }, // Right and Bottom
     { name: "Sega Master System", src: "/SegaMasterSystem.webp", layout: "full" },
     { name: "NES", src: "/NES.png", layout: "full" } // Top and Bottom
 ];
-
 export default function App() {
-    const [viewMode, setViewMode] = useState('front');
+    const [viewMode, setViewMode] = useState('front'); // 'front', 'side', 'back'
     const [activeTab, setActiveTab] = useState('title');
     const [isExporting, setIsExporting] = useState(false);
 
     const fileInputRef = useRef(null);
     const screenshotInputRef = useRef(null);
-    const frontExportRef = useRef(null);
-    const sideExportRef = useRef(null);
-    const backExportRef = useRef(null);
+    const exportRef = useRef(null); // Single ref for active view
 
     // --- Content State ---
     const [titleText, setTitleText] = useState("SUPER GAME TITLE");
@@ -144,7 +132,8 @@ export default function App() {
     const [consoleTemplate, setConsoleTemplate] = useState(CONSOLE_TEMPLATES.find(t => t.name === 'PS2') || CONSOLE_TEMPLATES[0]);
     const [bgImage, setBgImage] = useState(null);
     const [spineColor, setSpineColor] = useState('#2a2a2a');
-    const [ratingImage, setRatingImage] = useState(ratingM);
+    // Changed rating default to RP
+    const [ratingImage, setRatingImage] = useState(ratingPending);
     const [showRating, setShowRating] = useState(true);
     const [backBgColor, setBackBgColor] = useState('#262626');
 
@@ -170,7 +159,8 @@ export default function App() {
     });
     const [backLogosText, setBackLogosText] = useState("Game Publisher • Game Developer • Middleware Logo");
     const [backLegalText, setBackLegalText] = useState(LOREM_LEGAL);
-    const [esrbContent, setEsrbContent] = useState("Contains: Violence, Blood, Language");
+    // Updated default ESRB content text
+    const [esrbContent, setEsrbContent] = useState("Strong Lyrics\nFantasy Violence\nPartial Nudity");
 
     // --- Styles State ---
     const [titleStyle, setTitleStyle] = useState({
@@ -248,110 +238,87 @@ export default function App() {
     }, [draggingItem, dragStart, initialDragPos]);
 
 
-    const handleImageUpload = (e) => {
+    const readFileAsDataURL = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e);
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
-            const url = URL.createObjectURL(file);
-            setBgImage(url);
+            try {
+                const dataUrl = await readFileAsDataURL(file);
+                setBgImage(dataUrl);
+            } catch (err) {
+                console.error("Error reading file", err);
+            }
         }
     };
 
-    const handleScreenshotUpload = (e) => {
+    const handleScreenshotUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
-            const url = URL.createObjectURL(file);
-            const newScreenshots = [...backScreenshots];
-            newScreenshots[activeScreenshotIndex] = url;
-            setBackScreenshots(newScreenshots);
+            try {
+                const dataUrl = await readFileAsDataURL(file);
+                const newScreenshots = [...backScreenshots];
+                newScreenshots[activeScreenshotIndex] = dataUrl;
+                setBackScreenshots(newScreenshots);
+            } catch (err) {
+                console.error("Error reading file", err);
+            }
         }
     };
 
     const handleExport = async () => {
-        if (!window.html2canvas) {
-            alert("Export library failed to load. Please refresh the page.");
-            return;
-        }
-        
         setIsExporting(true);
 
         try {
-            // Give React time to render the export refs
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // Import modern-screenshot dynamically from CDN
+            const { domToPng } = await import('https://esm.sh/modern-screenshot');
+
+            // Wait for badges to hide
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            const node = exportRef.current;
+            if (!node) throw new Error("Preview element not found");
+
+            // Use html-to-image to generate png data url
+            const dataUrl = await domToPng(node, {
+                backgroundColor: null,
+                scale: 3, // High quality
+                style: { transform: 'scale(1)' }, // Reset any transforms
+                // ROBUST FILTER: Handle elements where className is an object (SVG) or undefined
+                filter: (n) => {
+                    if (!n || !n.classList) return true;
+                    // modern-screenshot might pass nodes where classList isn't available, but usually elements
+                    // SVG elements have classList too in modern browsers.
+                    // Fallback to safe string check just in case.
+                    const className = (typeof n.className === 'string') 
+                        ? n.className 
+                        : (n.className && n.className.baseVal) || '';
+                        
+                    return !className.includes('exclude-from-export');
+                },
+            });
 
             const timestamp = new Date().getTime();
             const cleanTitle = titleText.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'game';
+            const suffix = viewMode;
 
-            const downloadCanvas = (canvas, suffix) => {
-                const link = document.createElement('a');
-                link.download = `${cleanTitle}_${suffix}_${timestamp}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            };
-
-            const exportPromises = [];
-
-            // Front
-            if (frontExportRef.current) {
-                exportPromises.push(
-                    window.html2canvas(frontExportRef.current, {
-                        scale: 3,
-                        backgroundColor: null,
-                        useCORS: true,
-                        logging: false,
-                        allowTaint: true
-                    }).then(canvas => {
-                        downloadCanvas(canvas, 'front');
-                        return new Promise(resolve => setTimeout(resolve, 100));
-                    })
-                );
-            }
-
-            // Side
-            if (sideExportRef.current) {
-                exportPromises.push(
-                    window.html2canvas(sideExportRef.current, {
-                        scale: 3,
-                        backgroundColor: null,
-                        useCORS: true,
-                        logging: false,
-                        allowTaint: true
-                    }).then(canvas => {
-                        downloadCanvas(canvas, 'side');
-                        return new Promise(resolve => setTimeout(resolve, 100));
-                    })
-                );
-            }
-
-            // Back
-            if (backExportRef.current) {
-                exportPromises.push(
-                    window.html2canvas(backExportRef.current, {
-                        scale: 3,
-                        backgroundColor: null,
-                        useCORS: true,
-                        logging: false,
-                        allowTaint: true
-                    }).then(canvas => {
-                        downloadCanvas(canvas, 'back');
-                        return new Promise(resolve => setTimeout(resolve, 100));
-                    })
-                );
-            }
-
-            if (exportPromises.length === 0) {
-                alert("No elements found to export.");
-                setIsExporting(false);
-                return;
-            }
-
-            // Wait for all exports sequentially
-            await Promise.all(exportPromises);
-            setIsExporting(false);
+            const link = document.createElement('a');
+            link.download = `${cleanTitle}_${suffix}_${timestamp}.png`;
+            link.href = dataUrl;
+            link.click();
 
         } catch (err) {
             console.error("Export failed:", err);
+            alert("Export failed. Please try again.");
+        } finally {
             setIsExporting(false);
-            alert(`Export failed: ${err.message || "Unknown error"}`);
         }
     };
 
@@ -391,25 +358,26 @@ export default function App() {
 
     // --- VIEWS ---
 
-    const FrontView = ({ showBadges = true }) => {
+    const FrontView = ({ showBadges = true, innerRef }) => {
         return (
             <div
-                className="relative w-[540px] h-[680px] bg-neutral-900 shadow-2xl rounded-tr-lg rounded-br-lg overflow-hidden border-l-4 border-neutral-700 ring-1 ring-white/10"
+                ref={innerRef}
+                className="relative w-[540px] h-[680px] bg-[#1a1a1a] shadow-2xl rounded-tr-lg rounded-br-lg overflow-hidden border-l-4 border-[#404040] ring-1 ring-[#ffffff1a]"
                 style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}
             >
                 {/* 1. BACKGROUND (Z-0) */}
                 {bgImage ? (
                     <img src={bgImage} alt="Background" className="absolute inset-0 w-full h-full object-cover z-0" />
                 ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-neutral-700 bg-neutral-800 z-0">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-[#404040] bg-[#262626] z-0">
                         <ImageIcon size={64} className="mb-2 opacity-20" />
                         <span className="text-sm font-mono uppercase tracking-widest opacity-30">No Image</span>
                     </div>
                 )}
 
                 {/* 2. GRADIENTS (Z-0) */}
-                <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 z-0 pointer-events-none opacity-60"></div>
-                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent z-20 pointer-events-none"></div>
+                <div className="absolute inset-0 bg-gradient-to-b from-[#00000099] via-transparent to-[#000000cc] z-0 pointer-events-none opacity-60"></div>
+                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[#ffffff0d] to-transparent z-20 pointer-events-none"></div>
 
                 {/* 3. CONSOLE TEMPLATE (Z-20) */}
                 {consoleTemplate.layout === 'top' && (
@@ -433,7 +401,7 @@ export default function App() {
 
                     {/* TITLE */}
                     <div
-                        className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'title' && viewMode === 'front' ? 'border-purple-500 bg-black/20 backdrop-blur-sm' : 'border-transparent hover:border-white/20'}`}
+                        className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'title' && viewMode === 'front' ? 'border-[#a855f7] bg-[#00000033] backdrop-blur-sm' : 'border-transparent hover:border-[#ffffff33]'}`}
                         style={{
                             top: '120px',
                             left: '0',
@@ -445,7 +413,7 @@ export default function App() {
                         onMouseDown={(e) => handleMouseDown(e, 'title')}
                         onClick={(e) => { e.stopPropagation(); setViewMode('front'); setActiveTab('title'); }}
                     >
-                        {showBadges && activeTab === 'title' && viewMode === 'front' && <div className="absolute -top-3 left-2 bg-purple-500 text-white text-[10px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
+                        {showBadges && activeTab === 'title' && viewMode === 'front' && <div className="absolute -top-3 left-2 bg-[#a855f7] text-white text-[10px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
                         <h1 style={{
                             fontFamily: titleStyle.fontFamily, fontSize: `${titleStyle.fontSize}px`, color: titleStyle.color,
                             fontWeight: titleStyle.isBold ? 'bold' : 'normal', fontStyle: titleStyle.isItalic ? 'italic' : 'normal',
@@ -456,7 +424,7 @@ export default function App() {
 
                     {/* PUBLISHER */}
                     <div
-                        className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'publisher' && viewMode === 'front' ? 'border-purple-500 bg-black/20 backdrop-blur-sm' : 'border-transparent hover:border-white/20'}`}
+                        className={`absolute pointer-events-auto cursor-move p-2 border-2 rounded-lg ${showBadges && activeTab === 'publisher' && viewMode === 'front' ? 'border-[#a855f7] bg-[#00000033] backdrop-blur-sm' : 'border-transparent hover:border-[#ffffff33]'}`}
                         style={{
                             bottom: '100px',
                             right: '20px',
@@ -465,7 +433,7 @@ export default function App() {
                         onMouseDown={(e) => handleMouseDown(e, 'publisher')}
                         onClick={(e) => { e.stopPropagation(); setViewMode('front'); setActiveTab('publisher'); }}
                     >
-                        {showBadges && activeTab === 'publisher' && viewMode === 'front' && <div className="absolute -top-3 right-2 bg-purple-500 text-white text-[10px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
+                        {showBadges && activeTab === 'publisher' && viewMode === 'front' && <div className="absolute -top-3 right-2 bg-[#a855f7] text-white text-[10px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
                         <p style={{
                             fontFamily: publisherStyle.fontFamily, fontSize: `${publisherStyle.fontSize}px`, color: publisherStyle.color,
                             fontWeight: publisherStyle.isBold ? 'bold' : 'normal', fontStyle: publisherStyle.isItalic ? 'italic' : 'normal',
@@ -477,7 +445,7 @@ export default function App() {
                     {/* ESRB RATING */}
                     {showRating && (
                         <div
-                            className="absolute pointer-events-auto cursor-move w-10 h-14 bg-white/90 border border-black shadow-md flex flex-col items-center justify-center overflow-hidden hover:ring-2 hover:ring-purple-500"
+                            className="absolute pointer-events-auto cursor-move w-10 h-14 bg-[#ffffff99] border border-black shadow-md flex flex-col items-center justify-center overflow-hidden hover:ring-2 hover:ring-[#a855f7]"
                             style={{
                                 bottom: '20px',
                                 left: '20px',
@@ -493,83 +461,87 @@ export default function App() {
         );
     };
 
-    const SideView = ({ showBadges = true }) => (
-        <div className="relative w-[960px] h-[120px] bg-neutral-800 shadow-xl overflow-hidden flex items-center" style={{ backgroundColor: spineColor }}>
-            <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-black/20 pointer-events-none z-10"></div>
-            <div className={`h-full w-[120px] bg-gradient-to-b from-blue-600 to-blue-700 flex items-center justify-center border-r border-black/20 cursor-pointer relative ${showBadges && activeTab === 'console' && viewMode === 'side' ? 'ring-2 ring-purple-500 z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('console'); }}>
+    const SideView = ({ showBadges = true, innerRef }) => (
+        <div ref={innerRef} className="relative w-[720px] h-[90px] bg-[#262626] shadow-xl overflow-hidden flex items-center" style={{ backgroundColor: spineColor }}>
+            <div className="absolute inset-0 bg-gradient-to-b from-[#ffffff1a] to-[#00000033] pointer-events-none z-10"></div>
+            <div className={`h-full w-[120px] bg-gradient-to-b from-[#2563eb] to-[#1d4ed8] flex items-center justify-center border-r border-[#00000033] cursor-pointer relative ${showBadges && activeTab === 'console' && viewMode === 'side' ? 'ring-2 ring-[#a855f7] z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('console'); }}>
                 <span style={{ fontFamily: consoleStyle.fontFamily, fontSize: `${consoleStyle.fontSize}px`, color: consoleStyle.color, fontWeight: consoleStyle.isBold ? 'bold' : 'normal', fontStyle: consoleStyle.isItalic ? 'italic' : 'normal', textDecoration: consoleStyle.isUnderline ? 'underline' : 'none' }}>{consoleText}</span>
             </div>
-            <div className={`flex-1 h-full flex items-center justify-center px-4 cursor-pointer relative ${showBadges && activeTab === 'title' && viewMode === 'side' ? 'bg-black/10 ring-2 ring-purple-500 z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('title'); }}>
-                {showBadges && activeTab === 'title' && viewMode === 'side' && <div className="absolute -top-2 right-2 bg-purple-500 text-white text-[8px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
+            <div className={`flex-1 h-full flex items-center justify-center px-4 cursor-pointer relative ${showBadges && activeTab === 'title' && viewMode === 'side' ? 'bg-[#0000001a] ring-2 ring-[#a855f7] z-20' : ''}`} onClick={() => { setViewMode('side'); setActiveTab('title'); }}>
+                {showBadges && activeTab === 'title' && viewMode === 'side' && <div className="absolute -top-2 right-2 bg-[#a855f7] text-white text-[8px] px-2 rounded-full font-bold shadow-sm">EDITING</div>}
                 <span style={{ fontFamily: sideTitleStyle.fontFamily, fontSize: `${sideTitleStyle.fontSize}px`, color: sideTitleStyle.color, fontWeight: sideTitleStyle.isBold ? 'bold' : 'normal', fontStyle: sideTitleStyle.isItalic ? 'italic' : 'normal', textDecoration: sideTitleStyle.isUnderline ? 'underline' : 'none', textShadow: sideTitleStyle.textShadow ? '1px 1px 2px rgba(0,0,0,0.8)' : 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{titleText}</span>
             </div>
         </div>
     );
 
-    const BackView = ({ showBadges = true }) => (
-        <div
-            className="relative w-[540px] h-[680px] shadow-2xl rounded-tl-lg rounded-bl-lg overflow-hidden border-r-4 border-neutral-700 ring-1 ring-white/10 flex flex-col transition-colors duration-200"
+    const BackView = ({ showBadges = true, innerRef }) => (
+        <div 
+            ref={innerRef}
+            className="relative w-[540px] h-[680px] shadow-2xl rounded-tl-lg rounded-bl-lg overflow-hidden border-r-4 border-[#404040] ring-1 ring-[#ffffff1a] flex flex-col transition-colors duration-200" 
             style={{ backgroundColor: backBgColor }}
         >
-            <div className="absolute inset-0 bg-neutral-800 pattern-dots z-0 opacity-10 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-[#262626] pattern-dots z-0 opacity-10 pointer-events-none"></div>
 
             {/* Headline */}
-            <div className={`relative z-10 p-4 pb-2 cursor-pointer border-2 border-transparent hover:border-white/10 ${showBadges && activeTab === 'story' && viewMode === 'back' ? 'border-purple-500 bg-black/20' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('story'); }}>
+            <div className={`relative z-10 p-4 pb-2 cursor-pointer border-2 border-transparent hover:border-[#ffffff1a] ${showBadges && activeTab === 'story' && viewMode === 'back' ? 'border-[#a855f7] bg-[#00000033]' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('story'); }}>
                 <h2 style={{ fontFamily: backHeadlineStyle.fontFamily, fontSize: `${backHeadlineStyle.fontSize}px`, color: backHeadlineStyle.color, fontWeight: backHeadlineStyle.isBold ? 'bold' : 'normal', fontStyle: backHeadlineStyle.isItalic ? 'italic' : 'normal', textDecoration: backHeadlineStyle.isUnderline ? 'underline' : 'none', textShadow: backHeadlineStyle.textShadow ? '0px 2px 4px rgba(0,0,0,0.8)' : 'none', textAlign: 'center', lineHeight: 1.1 }}>{backHeadline}</h2>
             </div>
 
-            {/* NEW: Description Paragraph */}
-            <div className={`relative z-10 px-4 pb-2 cursor-pointer border-2 border-transparent hover:border-white/10 ${showBadges && activeTab === 'description' && viewMode === 'back' ? 'border-purple-500 bg-black/20' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('description'); }}>
+            {/* Description Paragraph */}
+            <div className={`relative z-10 px-4 pb-2 cursor-pointer border-2 border-transparent hover:border-[#ffffff1a] ${showBadges && activeTab === 'description' && viewMode === 'back' ? 'border-[#a855f7] bg-[#00000033]' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('description'); }}>
                 <p style={{ fontFamily: backDescriptionStyle.fontFamily, fontSize: `${backDescriptionStyle.fontSize}px`, color: backDescriptionStyle.color, fontWeight: backDescriptionStyle.isBold ? 'bold' : 'normal', fontStyle: backDescriptionStyle.isItalic ? 'italic' : 'normal', textDecoration: backDescriptionStyle.isUnderline ? 'underline' : 'none', textShadow: backDescriptionStyle.textShadow ? '0px 1px 2px rgba(0,0,0,0.8)' : 'none', textAlign: backDescriptionStyle.textAlign }}>{backDescription}</p>
             </div>
 
             <div className="relative z-10 px-4 py-2 flex gap-2 justify-center h-[100px]">
                 {backScreenshots.map((shot, idx) => (
-                    <div key={idx} className={`flex-1 bg-black rounded overflow-hidden border border-neutral-600 relative cursor-pointer group ${showBadges && activeTab === 'shots' && viewMode === 'back' ? 'ring-2 ring-purple-500' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('shots'); setActiveScreenshotIndex(idx); }}>
-                        {shot ? <img src={shot} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={16} className="text-neutral-600" /></div>}
-                        {showBadges && activeTab === 'shots' && viewMode === 'back' && <div className="absolute inset-0 bg-purple-500/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-[8px] font-bold text-white bg-black/50 px-1 rounded">EDIT</span></div>}
+                    <div key={idx} className={`flex-1 bg-black rounded overflow-hidden border border-[#525252] relative cursor-pointer group ${showBadges && activeTab === 'shots' && viewMode === 'back' ? 'ring-2 ring-[#a855f7]' : ''}`} onClick={() => { setViewMode('back'); setActiveTab('shots'); setActiveScreenshotIndex(idx); }}>
+                        {shot ? <img src={shot} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={12} className="text-neutral-600" /></div>}
+                        {showBadges && activeTab === 'shots' && viewMode === 'back' && <div className="absolute inset-0 bg-[#a855f733] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-[8px] font-bold text-white bg-[#00000080] px-1 rounded">EDIT</span></div>}
                     </div>
                 ))}
             </div>
+
+            {/* Spacer */}
+            <div className="flex-1"></div>
+
             <div className="relative z-10 px-4 py-2 flex gap-2">
-                <div className={`w-1/3 bg-neutral-100 text-black p-2 rounded-sm text-[8px] font-bold space-y-1 cursor-pointer border-2 ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-purple-500' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('specs'); }}>
-                    <div className="flex items-center gap-1 border-b border-neutral-300 pb-1"><Gamepad2 size={10} /> <span>{specsData.players}</span></div>
-                    <div className="flex items-center gap-1 border-b border-neutral-300 pb-1"><Box size={10} /> <span>{specsData.storage}</span></div>
+                <div className={`w-1/3 bg-[#f5f5f5] text-black p-2 rounded-sm text-[8px] font-bold space-y-1 cursor-pointer border-2 ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-[#a855f7]' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('specs'); }}>
+                    <div className="flex items-center gap-1 border-b border-[#d4d4d4] pb-1"><Gamepad2 size={10} /> <span>{specsData.players}</span></div>
+                    <div className="flex items-center gap-1 border-b border-[#d4d4d4] pb-1"><Box size={10} /> <span>{specsData.storage}</span></div>
                     <div className="flex items-center gap-1"><Monitor size={10} /> <span>{specsData.online}</span></div>
                 </div>
-                <div className={`flex-1 flex items-center justify-center text-center p-2 cursor-pointer border-2 rounded ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-purple-500' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('specs'); }}><p className="text-[10px] text-neutral-300 font-bold uppercase leading-tight">{backLogosText}</p></div>
+                <div className={`flex-1 flex items-center justify-center text-center p-2 cursor-pointer border-2 rounded ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-[#a855f7]' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('specs'); }}><p className="text-[10px] text-neutral-300 font-bold uppercase leading-tight">{backLogosText}</p></div>
             </div>
             <div className="relative z-10 px-4 py-2 flex-1 flex items-end">
-                <div className={`w-full cursor-pointer border-2 rounded p-1 ${showBadges && activeTab === 'legal' && viewMode === 'back' ? 'border-purple-500' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('legal'); }}><p style={{ fontFamily: backLegalStyle.fontFamily, fontSize: `${backLegalStyle.fontSize}px`, color: backLegalStyle.color, fontWeight: backLegalStyle.isBold ? 'bold' : 'normal', fontStyle: backLegalStyle.isItalic ? 'italic' : 'normal', textDecoration: backLegalStyle.isUnderline ? 'underline' : 'none', textAlign: 'justify' }}>{backLegalText}</p></div>
+                <div className={`w-full cursor-pointer border-2 rounded p-1 ${showBadges && activeTab === 'legal' && viewMode === 'back' ? 'border-[#a855f7]' : 'border-transparent'}`} onClick={() => { setViewMode('back'); setActiveTab('legal'); }}><p style={{ fontFamily: backLegalStyle.fontFamily, fontSize: `${backLegalStyle.fontSize}px`, color: backLegalStyle.color, fontWeight: backLegalStyle.isBold ? 'bold' : 'normal', fontStyle: backLegalStyle.isItalic ? 'italic' : 'normal', textDecoration: backLegalStyle.isUnderline ? 'underline' : 'none', textAlign: 'justify' }}>{backLegalText}</p></div>
             </div>
-            <div className="relative z-10 p-2 bg-neutral-900 border-t border-neutral-700 h-24">
+            <div
+    className="relative z-10 p-2 border-t border-[#404040] h-24"
+    style={{ backgroundColor: backBgColor }}
+>
                 <div className="flex w-full h-full gap-2">
                     {/* LEFT: Expanded ESRB Rating */}
                     {showRating && (
-                        <div
-                            className={`flex-1 flex gap-1 p-1 items-center justify-start bg-black/50 cursor-pointer border-2 ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-purple-500' : 'border-transparent'}`}
+                        <div 
+                            className={`flex-1 flex gap-1 p-1 items-center justify-start bg-[#ffffff] cursor-pointer ${showBadges && activeTab === 'specs' && viewMode === 'back' ? 'border-[#a855f7] border-2' : ''}`}
                             onClick={() => { setViewMode('back'); setActiveTab('specs'); }}
                         >
                             {/* ESRB Rating Image */}
-                            <div className="w-12 h-20 flex-shrink-0 flex items-center justify-center bg-white/90 rounded border border-black overflow-hidden">
+                            <div className="w-12 h-20 flex-shrink-0 flex items-center justify-center bg-[#ffffff] border-r border-black overflow-hidden">
                                 <img src={ratingImage} alt="Rating" className="w-full h-full object-contain" draggable="false" />
                             </div>
                             {/* ESRB Box with Content */}
-                            <div className="flex-1 h-full flex flex-col items-center justify-center relative overflow-hidden">
-                                <img src={ESRB_Box} alt="ESRB Box" className="absolute inset-0 w-full h-full object-fill" draggable="false" />
-                                <p className="relative z-10 text-[6px] text-black text-center px-1 font-bold leading-tight line-clamp-2">{esrbContent}</p>
+                            <div className="flex-1 h-full flex flex-col items-center justify-center relative overflow-hidden bg-white">
+                                <p className="relative z-10 text-[8px] text-black text-center px-1 font-bold leading-tight whitespace-pre-wrap">{esrbContent}</p>
                             </div>
                         </div>
                     )}
 
-                    {/* CENTER: Epilepsy Warning */}
-                    <div className="flex-1 p-1 flex items-center justify-center">
-                        <img src={Epilepsy_Warning} className="w-full h-full object-contain opacity-80" draggable="false" alt="Epilepsy Warning" />
+                    <div className="flex-1 flex items-center justify-center">
+                        <img src={Epilepsy_Warning} className="w-full h-full object-contain opacity-80" draggable="false" />
                     </div>
-
-                    {/* RIGHT: Barcode */}
-                    <div className="flex-1 p-1 flex items-center justify-center">
-                        <img src={Barcode} className="w-full h-full object-contain opacity-80" draggable="false" alt="Barcode" />
+                    <div className="flex-1 flex items-center justify-center">
+                        <img src={Barcode} className="w-full h-full object-contain opacity-80" draggable="false" />
                     </div>
                 </div>
             </div>
@@ -578,11 +550,12 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-neutral-900 text-neutral-100 font-sans selection:bg-purple-500 selection:text-white flex flex-col md:flex-row overflow-hidden">
+            {/* Sidebar */}
             <div className="w-full md:w-96 bg-neutral-800 border-r border-neutral-700 flex flex-col h-[50vh] md:h-screen shadow-xl z-20">
                 <div className="p-6 border-b border-neutral-700 bg-neutral-800"><h1 className="text-2xl font-bold flex items-center gap-2 text-purple-400"><Box className="w-6 h-6" /> Box Art Forge</h1></div>
                 <div className="flex p-2 gap-2 bg-neutral-900 border-b border-neutral-700">
                     {['front', 'side', 'back'].map(mode => (
-                        <button key={mode} onClick={() => { setViewMode(mode); setActiveTab(mode === 'front' ? 'title' : mode === 'side' ? 'console' : 'story'); }} className={`flex-1 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all ${viewMode === mode ? 'bg-purple-600 text-white shadow-lg' : 'bg-neutral-800 text-neutral-500 hover:bg-neutral-700'}`}>{mode} View</button>
+                        <button key={mode} onClick={() => { setViewMode(mode); setActiveTab(mode === 'front' ? 'title' : mode === 'side' ? 'console' : 'story'); }} className={`flex-1 py-2 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all ${viewMode === mode ? 'bg-purple-600 text-white shadow-lg' : 'bg-neutral-800 text-neutral-500 hover:bg-neutral-700'}`}>{mode}</button>
                     ))}
                 </div>
                 <div className="flex border-b border-neutral-700 bg-neutral-900/50 overflow-x-auto">
@@ -591,21 +564,21 @@ export default function App() {
                     {viewMode === 'back' && (<><button onClick={() => setActiveTab('story')} className={`flex-1 py-4 px-2 text-xs font-medium flex justify-center items-center gap-2 ${activeTab === 'story' ? 'text-purple-400 border-b-2 border-purple-400 bg-neutral-800' : 'text-neutral-500'}`}><Type size={14} /> Story</button><button onClick={() => setActiveTab('shots')} className={`flex-1 py-4 px-2 text-xs font-medium flex justify-center items-center gap-2 ${activeTab === 'shots' ? 'text-purple-400 border-b-2 border-purple-400 bg-neutral-800' : 'text-neutral-500'}`}><ImageIcon size={14} /> Shots</button><button onClick={() => setActiveTab('specs')} className={`flex-1 py-4 px-2 text-xs font-medium flex justify-center items-center gap-2 ${activeTab === 'specs' ? 'text-purple-400 border-b-2 border-purple-400 bg-neutral-800' : 'text-neutral-500'}`}><Box size={14} /> Specs</button><button onClick={() => setActiveTab('legal')} className={`flex-1 py-4 px-2 text-xs font-medium flex justify-center items-center gap-2 ${activeTab === 'legal' ? 'text-purple-400 border-b-2 border-purple-400 bg-neutral-800' : 'text-neutral-500'}`}><FileText size={14} /> Legal</button></>)}
                 </div>
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {showTextControls && (
+                    {showTextControls (
                         <div className="space-y-6 animate-in fade-in duration-300">
                             <div className="bg-purple-900/20 border border-purple-900/50 p-2 rounded text-xs text-purple-300 font-mono text-center mb-4">EDITING: {viewMode.toUpperCase()} &gt; {activeTab.toUpperCase()}</div>
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Content</label>
                                 {activeTab === 'legal' || activeTab === 'story' || activeTab === 'description' ? (
-                                    <textarea
-                                        rows={activeTab === 'story' ? 2 : activeTab === 'description' ? 4 : 6}
-                                        value={viewMode === 'back' && activeTab === 'story' ? backHeadline : viewMode === 'back' && activeTab === 'description' ? backDescription : backLegalText}
+                                    <textarea 
+                                        rows={activeTab === 'story' ? 2 : activeTab === 'description' ? 4 : 6} 
+                                        value={viewMode === 'back' && activeTab === 'story' ? backHeadline : viewMode === 'back' && activeTab === 'description' ? backDescription : backLegalText} 
                                         onChange={(e) => {
                                             if (activeTab === 'story') setBackHeadline(e.target.value);
                                             else if (activeTab === 'description') setBackDescription(e.target.value);
                                             else setBackLegalText(e.target.value);
-                                        }}
-                                        className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-3 text-neutral-100 focus:ring-2 focus:ring-purple-500 outline-none text-xs"
+                                        }} 
+                                        className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-3 text-neutral-100 focus:ring-2 focus:ring-purple-500 outline-none text-xs" 
                                     />
                                 ) : (
                                     <input type="text" value={viewMode === 'front' && activeTab === 'title' ? titleText : viewMode === 'front' && activeTab === 'publisher' ? publisherText : viewMode === 'side' && activeTab === 'title' ? titleText : viewMode === 'side' && activeTab === 'console' ? consoleText : ''} onChange={(e) => { if (activeTab === 'title') setTitleText(e.target.value); else if (activeTab === 'publisher') setPublisherText(e.target.value); else if (activeTab === 'console') setConsoleText(e.target.value); }} className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-3 text-neutral-100 focus:ring-2 focus:ring-purple-500 outline-none" />
@@ -653,11 +626,13 @@ export default function App() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-2 mb-4">{backScreenshots.map((shot, idx) => (<div key={idx} onClick={() => setActiveScreenshotIndex(idx)} className={`aspect-[4/3] bg-neutral-800 border-2 rounded cursor-pointer overflow-hidden ${activeScreenshotIndex === idx ? 'border-purple-500 ring-2 ring-purple-500/50' : 'border-neutral-600'}`}>{shot ? <img src={shot} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={12} className="text-neutral-600" /></div>}</div>))}</div><div className="border-2 border-dashed border-neutral-600 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-purple-500 hover:bg-purple-900/5 transition-all cursor-pointer" onClick={() => screenshotInputRef.current?.click()}><Upload className="text-neutral-400 mb-2" size={24} /><p className="text-xs text-neutral-300 font-bold">Upload to Slot {activeScreenshotIndex + 1}</p><input type="file" ref={screenshotInputRef} className="hidden" accept="image/*" onChange={handleScreenshotUpload} /></div>{backScreenshots[activeScreenshotIndex] && (<button onClick={() => { const newShots = [...backScreenshots]; newShots[activeScreenshotIndex] = null; setBackScreenshots(newShots); }} className="w-full py-2 bg-red-900/30 text-red-400 border border-red-900/50 rounded-md text-xs font-bold">Clear Slot {activeScreenshotIndex + 1}</button>)}</div>
+                            <div className="grid grid-cols-3 gap-2 mb-4">{backScreenshots.map((shot, idx) => (<div key={idx} onClick={() => setActiveScreenshotIndex(idx)} className={`aspect-[4/3] bg-neutral-800 border-2 rounded cursor-pointer overflow-hidden ${activeScreenshotIndex === idx ? 'border-purple-500 ring-2 ring-purple-500/50' : 'border-neutral-600'}`}>{shot ? <img src={shot} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon size={12} className="text-neutral-600" /></div>}</div>))}</div>
+                            <div className="border-2 border-dashed border-neutral-600 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:border-purple-500 hover:bg-purple-900/5 transition-all cursor-pointer" onClick={() => screenshotInputRef.current?.click()}><Upload className="text-neutral-400 mb-2" size={24} /><p className="text-xs text-neutral-300 font-bold">Upload to Slot {activeScreenshotIndex + 1}</p><input type="file" ref={screenshotInputRef} className="hidden" accept="image/*" onChange={handleScreenshotUpload} /></div>{backScreenshots[activeScreenshotIndex] && (<button onClick={() => { const newShots = [...backScreenshots]; newShots[activeScreenshotIndex] = null; setBackScreenshots(newShots); }} className="w-full py-2 bg-red-900/30 text-red-400 border border-red-900/50 rounded-md text-xs font-bold">Clear Slot {activeScreenshotIndex + 1}</button>)}
+                        </div>
                     )}
                     {viewMode === 'back' && activeTab === 'specs' && (
                         <div className="space-y-4 animate-in fade-in duration-300"><div className="space-y-2"><label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Player Count</label><input type="text" value={specsData.players} onChange={(e) => setSpecsData({ ...specsData, players: e.target.value })} className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-2 text-neutral-100 text-sm" /></div><div className="space-y-2"><label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">File Size</label><input type="text" value={specsData.storage} onChange={(e) => setSpecsData({ ...specsData, storage: e.target.value })} className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-2 text-neutral-100 text-sm" /></div><div className="space-y-2"><label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Network Features</label><input type="text" value={specsData.online} onChange={(e) => setSpecsData({ ...specsData, online: e.target.value })} className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-2 text-neutral-100 text-sm" /></div><div className="border-t border-neutral-700 my-4 pt-4 space-y-2"><label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Logos & Middleware</label><input type="text" value={backLogosText} onChange={(e) => setBackLogosText(e.target.value)} className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-2 text-neutral-100 text-sm" /></div>
-                            {showRating && (
+                        {showRating && (
                                 <div className="border-t border-neutral-700 pt-4 space-y-2">
                                     <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider">ESRB Content Description</label>
                                     <textarea value={esrbContent} onChange={(e) => setEsrbContent(e.target.value)} rows={3} className="w-full bg-neutral-900 border border-neutral-600 rounded-md p-2 text-neutral-100 text-xs focus:ring-2 focus:ring-purple-500 outline-none" placeholder="e.g., Contains: Violence, Blood, Language" />
@@ -667,17 +642,12 @@ export default function App() {
                     )}
                 </div>
                 <div className="p-4 bg-neutral-900 border-t border-neutral-700 space-y-2">
-                    <button onClick={handleExport} disabled={isExporting} className="w-full py-3 bg-white text-black font-bold rounded-md hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">{isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}{isExporting ? "Rendering..." : "Export All (3 Files)"}</button>
+                    <button onClick={handleExport} disabled={isExporting} className="w-full py-3 bg-white text-black font-bold rounded-md hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">{isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}{isExporting ? "Rendering..." : "Export Current View"}</button>
                 </div>
             </div>
             <div className="flex-1 bg-neutral-950 p-8 flex flex-col items-center justify-center overflow-auto relative">
                 <div className="absolute inset-0 pattern-grid opacity-10 pointer-events-none"></div>
-                <div className="relative group transition-all duration-500 ease-in-out">{viewMode === 'front' && <FrontView />}{viewMode === 'side' && <SideView />}{viewMode === 'back' && <BackView />}</div>
-            </div>
-            <div style={{ position: 'fixed', left: '-9999px', top: 0 }}>
-                <div ref={frontExportRef}><FrontView showBadges={false} /></div>
-                <div ref={sideExportRef}><SideView showBadges={false} /></div>
-                <div ref={backExportRef}><BackView showBadges={false} /></div>
+                <div className="relative group transition-all duration-500 ease-in-out">{viewMode === 'front' && <FrontView showBadges={!isExporting} innerRef={exportRef} />}{viewMode === 'side' && <SideView showBadges={!isExporting} innerRef={exportRef} />}{viewMode === 'back' && <BackView showBadges={!isExporting} innerRef={exportRef} />}</div>
             </div>
             <style>{`.pattern-grid { background-image: radial-gradient(#404040 1px, transparent 1px); background-size: 20px 20px; } .pattern-dots { background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 10px 10px; }`}</style>
         </div>

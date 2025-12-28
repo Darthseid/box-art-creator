@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+
 import {
     Type,
     Image as ImageIcon,
@@ -15,10 +16,8 @@ import {
     FileText,
     Gamepad2,
     Upload,
-    Move,
     Eye,
     EyeOff,
-    Palette
 } from 'lucide-react';
 
 import ratingM from './assets/Mature.png';
@@ -39,7 +38,6 @@ import CeroB from './assets/b.avif';
 import CeroC from './assets/c.webp';
 import CeroD from './assets/d.png';
 import CeroZ from './assets/Z.png';
-import ESRB_Box from './assets/ESRB_Box.jpg';
 import Epilepsy_Warning from './assets/Epilepsy.png';
 import Barcode from './assets/barcode.png';
 
@@ -62,7 +60,6 @@ const RATING_IMAGES = [
     { name: 'CERO C', src: CeroC },
     { name: 'CERO D', src: CeroD },
     { name: 'CERO Z', src: CeroZ },
-    { name: 'ESRB_BOX', src: ESRB_Box },
 ];
 
 const FONTS = [
@@ -134,7 +131,6 @@ export default function App() {
     const [consoleTemplate, setConsoleTemplate] = useState(CONSOLE_TEMPLATES.find(t => t.name === 'PS2') || CONSOLE_TEMPLATES[0]);
     const [bgImage, setBgImage] = useState(null);
     const [spineColor, setSpineColor] = useState('#2a2a2a');
-    // Changed rating default to RP
     const [ratingImage, setRatingImage] = useState(ratingPending);
     const [showRating, setShowRating] = useState(true);
     const [backBgColor, setBackBgColor] = useState('#262626');
@@ -161,7 +157,6 @@ export default function App() {
     });
     const [backLogosText, setBackLogosText] = useState("Game Publisher • Game Developer • Middleware Logo");
     const [backLegalText, setBackLegalText] = useState(LOREM_LEGAL);
-    // Updated default ESRB content text
     const [esrbContent, setEsrbContent] = useState("Strong Lyrics\nFantasy Violence\nPartial Nudity");
 
     // --- Styles State ---
@@ -189,7 +184,7 @@ export default function App() {
 
     useEffect(() => {
         const script = document.createElement('script');
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+        script.src = "https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js";
         script.async = true;
         document.body.appendChild(script);
         return () => {
@@ -198,6 +193,83 @@ export default function App() {
             }
         }
     }, []);
+
+    const readFileAsDataURL = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (e) => reject(e);
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            try {
+                const dataUrl = await readFileAsDataURL(file);
+                setBgImage(dataUrl);
+            } catch (err) {
+                console.error("Error reading file", err);
+            }
+        }
+    };
+
+    const handleScreenshotUpload = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            try {
+                const dataUrl = await readFileAsDataURL(file);
+                const newScreenshots = [...backScreenshots];
+                newScreenshots[activeScreenshotIndex] = dataUrl;
+                setBackScreenshots(newScreenshots);
+            } catch (err) {
+                console.error("Error reading file", err);
+            }
+        }
+    };
+
+    const handleExport = async () => {
+        if (!window.htmlToImage) {
+            alert("Export library is loading. Please wait a moment.");
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            const node = exportRef.current;
+            if (!node) throw new Error("Preview element not found");
+
+            const dataUrl = await window.htmlToImage.toPng(node, {
+                backgroundColor: null,
+                scale: 3, // High quality
+                style: { transform: 'scale(1)' },
+                filter: (n) => {
+                    if (!n || !n.classList) return true;
+                    // Standard check for class string
+                    const className = typeof n.className === 'string' ? n.className : '';
+                    return !className.includes('exclude-from-export');
+                },
+            });
+
+            const timestamp = new Date().getTime();
+            const cleanTitle = titleText.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'game';
+            const suffix = viewMode;
+
+            const link = document.createElement('a');
+            link.download = `${cleanTitle}_${suffix}_${timestamp}.png`;
+            link.href = dataUrl;
+            link.click();
+
+        } catch (err) {
+            console.error("Export failed:", err);
+            alert("Export failed. Please check console.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     // --- DRAG HANDLERS ---
     const handleMouseDown = (e, item) => {
@@ -238,91 +310,6 @@ export default function App() {
             window.removeEventListener('mouseup', handleMouseUp);
         };
     }, [draggingItem, dragStart, initialDragPos]);
-
-
-    const readFileAsDataURL = (file) => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => reject(e);
-            reader.readAsDataURL(file);
-        });
-    };
-
-    const handleImageUpload = async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            try {
-                const dataUrl = await readFileAsDataURL(file);
-                setBgImage(dataUrl);
-            } catch (err) {
-                console.error("Error reading file", err);
-            }
-        }
-    };
-
-    const handleScreenshotUpload = async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            try {
-                const dataUrl = await readFileAsDataURL(file);
-                const newScreenshots = [...backScreenshots];
-                newScreenshots[activeScreenshotIndex] = dataUrl;
-                setBackScreenshots(newScreenshots);
-            } catch (err) {
-                console.error("Error reading file", err);
-            }
-        }
-    };
-
-    const handleExport = async () => {
-        setIsExporting(true);
-
-        try {
-            // Import modern-screenshot dynamically from CDN
-            const { domToPng } = await import('https://esm.sh/modern-screenshot');
-
-            // Wait for badges to hide
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            const node = exportRef.current;
-            if (!node) throw new Error("Preview element not found");
-
-            // Use html-to-image to generate png data url
-            const dataUrl = await domToPng(node, {
-                backgroundColor: null,
-                scale: 3, // High quality
-                style: { transform: 'scale(1)' }, // Reset any transforms
-                // ROBUST FILTER: Handle elements where className is an object (SVG) or undefined
-                filter: (n) => {
-                    if (!n || !n.classList) return true;
-                    // modern-screenshot might pass nodes where classList isn't available, but usually elements
-                    // SVG elements have classList too in modern browsers.
-                    // Fallback to safe string check just in case.
-                    const className = (typeof n.className === 'string') 
-                        ? n.className 
-                        : (n.className && n.className.baseVal) || '';
-                        
-                    return !className.includes('exclude-from-export');
-                },
-            });
-
-            const timestamp = new Date().getTime();
-            const cleanTitle = titleText.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'game';
-            const suffix = viewMode;
-
-            const link = document.createElement('a');
-            link.download = `${cleanTitle}_${suffix}_${timestamp}.png`;
-            link.href = dataUrl;
-            link.click();
-
-        } catch (err) {
-            console.error("Export failed:", err);
-            alert("Export failed. Please try again.");
-        } finally {
-            setIsExporting(false);
-        }
-    };
 
     const updateStyle = (key, value) => {
         let setter = null;
